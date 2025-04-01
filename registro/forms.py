@@ -18,15 +18,26 @@ class EstudianteForm(forms.ModelForm):
 class AtrasoForm(forms.ModelForm):
     class Meta:
         model = Atraso
-        fields = ['estudiante', 'justificacion']
+        fields = ['justificacion']  # Solo mostramos el campo de justificación
         widgets = {
-            'estudiante': forms.Select(attrs={'class': 'form-control'}),
-            # 'curso': forms.Select(choices=CURSOS_CHILE, attrs={'class': 'form-control'}),
             'justificacion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+    # Campo oculto para almacenar el ID del estudiante seleccionado
+    estudiante_id = forms.CharField(widget=forms.HiddenInput(), required=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
-            self.fields['estudiante'].widget.attrs['readonly'] = True
-            # self.fields['curso'].widget.attrs['readonly'] = True
+            self.fields['estudiante_id'].initial = self.instance.estudiante.id
+
+    def clean_estudiante_id(self):
+        # Asegurarse de que el ID del estudiante es válido
+        estudiante_id = self.cleaned_data.get('estudiante_id')
+        if estudiante_id:
+            try:
+                estudiante = Estudiante.objects.get(id=estudiante_id)
+                return estudiante
+            except Estudiante.DoesNotExist:
+                raise forms.ValidationError("Estudiante no encontrado.")
+        raise forms.ValidationError("Debe seleccionar un estudiante.")

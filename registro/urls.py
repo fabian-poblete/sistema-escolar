@@ -18,4 +18,8 @@ urlpatterns = [
          name="carga_masiva_estudiantes"),
     path("descargar-plantilla/", views.descargar_plantilla,
          name="descargar_plantilla"),
+    path('buscar_estudiantes/', views.buscar_estudiantes,
+         name='buscar_estudiantes'),
+    path('descargar-log-errores/', views.descargar_log_errores,
+         name='descargar_log_errores'),
 ]

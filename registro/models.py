@@ -15,16 +15,17 @@ CURSOS_CHILE = [
 
 
 class Estudiante(models.Model):
+    # El RUT almacenado será sin puntos ni guion
     rut = models.CharField(
-        max_length=12,
+        max_length=10,  # El tamaño será 10, ya que no tendrá los puntos ni el guion
         unique=True,
         validators=[
             RegexValidator(
-                regex=r'^\d{1,2}\.\d{3}\.\d{3}-[\dkK]$',
-                message='El RUT debe tener el formato XX.XXX.XXX-X'
+                regex=r'^\d{7,8}-[\dkK]$',  # Solo números y guion al final
+                message='El RUT debe tener el formato XXXXXXXXX-X o XXXXXXXXX-K'
             )
         ],
-        help_text='Formato: XX.XXX.XXX-X'
+        help_text='Formato: XXXXXXXXX-X o XXXXXXXXX-K (sin puntos ni guion)'
     )
     nombre = models.CharField(max_length=100)
     curso = models.CharField(max_length=20, choices=CURSOS_CHILE)
@@ -39,6 +40,12 @@ class Estudiante(models.Model):
         verbose_name = 'Estudiante'
         verbose_name_plural = 'Estudiantes'
         ordering = ['nombre']
+
+    # Limpiar el RUT antes de guardarlo (eliminando puntos y guion)
+    def save(self, *args, **kwargs):
+        # Eliminar puntos y guion del RUT
+        self.rut = self.rut.replace('.', '').replace('-', '')
+        super(Estudiante, self).save(*args, **kwargs)
 
 
 class Atraso(models.Model):

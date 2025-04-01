@@ -1,4 +1,4 @@
-{% extends 'registro/base.html' %} {% load crispy_forms_tags %} 
+{% extends 'registro/base.html' %} {% load crispy_forms_tags %} } 
 {% block content%}
 <div class="row justify-content-center">
   <div class="col-md-8">
@@ -12,7 +12,48 @@
           <span id="current-time"></span>
         </div>
         <form method="post">
-          {% csrf_token %} {{ form|crispy }}
+          {% csrf_token %} {% if form.errors %}
+          <div class="alert alert-danger">
+            <h5>Por favor, corrija los siguientes errores:</h5>
+            {{ form.errors }}
+          </div>
+          {% endif %}
+
+          <!-- Campo de búsqueda de estudiante -->
+          <div class="mb-3">
+            <label for="student-search" class="form-label">
+              Buscar Estudiante
+            </label>
+            <input
+              type="text"
+              id="student-search"
+              class="form-control"
+              placeholder="Buscar por nombre o RUT"
+              autocomplete="off"
+            />
+            <div
+              id="search-results"
+              class="list-group mt-2"
+              style="max-height: 200px; overflow-y: auto"
+            ></div>
+          </div>
+
+          <!-- Campo oculto para almacenar el ID del estudiante -->
+          <input type="hidden" name="estudiante_id" id="student-id" />
+
+          <!-- Campo de justificación -->
+          <div class="mb-3">
+            <label for="id_justificacion" class="form-label"
+              >Justificación</label
+            >
+            <textarea
+              name="justificacion"
+              id="id_justificacion"
+              class="form-control"
+              rows="3"
+            ></textarea>
+          </div>
+
           <div class="mt-4">
             <button type="submit" class="btn btn-primary">
               <i class="bi bi-check-circle"></i> Registrar Atraso
@@ -41,5 +82,49 @@
   // Actualizar cada segundo
   updateTime();
   setInterval(updateTime, 1000);
+
+  // Función para buscar estudiantes en tiempo real
+  document
+    .getElementById("student-search")
+    .addEventListener("input", function () {
+      const query = this.value.trim();
+
+      if (query.length > 2) {
+        // Realizar búsqueda si el texto tiene más de 2 caracteres
+        fetch(`/buscar_estudiantes/?q=${query}`)
+          .then((response) => response.json())
+          .then((data) => {
+            const resultsContainer = document.getElementById("search-results");
+            resultsContainer.innerHTML = ""; // Limpiar resultados anteriores
+
+            if (data.length > 0) {
+              data.forEach((student) => {
+                const resultItem = document.createElement("a");
+                resultItem.href = "#";
+                resultItem.classList.add(
+                  "list-group-item",
+                  "list-group-item-action"
+                );
+                resultItem.textContent = `${student.nombre} - ${student.rut}`;
+                resultItem.onclick = () =>
+                  selectStudent(student.id, student.nombre, student.rut);
+                resultsContainer.appendChild(resultItem);
+              });
+            } else {
+              resultsContainer.innerHTML =
+                '<div class="list-group-item">No se encontraron resultados</div>';
+            }
+          });
+      } else {
+        document.getElementById("search-results").innerHTML = ""; // Limpiar resultados si no hay texto
+      }
+    });
+
+  // Función para seleccionar un estudiante
+  function selectStudent(id, nombre, rut) {
+    document.getElementById("student-search").value = `${nombre} - ${rut}`;
+    document.getElementById("student-id").value = id; // Asumiendo que tienes un campo oculto para almacenar el ID
+    document.getElementById("search-results").innerHTML = ""; // Limpiar los resultados
+  }
 </script>
 {% endblock %}
