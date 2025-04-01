@@ -1,0 +1,80 @@
+{% extends 'registro/base.html' %} {% block content %}
+<div class="row">
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div
+        class="card-header d-flex justify-content-between align-items-center"
+      >
+        <h3 class="card-title mb-0">Información del Estudiante</h3>
+        <div class="btn-group">
+          <a
+            href="{% url 'editar_estudiante' estudiante.pk %}"
+            class="btn btn-sm btn-warning"
+          >
+            <i class="bi bi-pencil"></i>
+          </a>
+          <a
+            href="{% url 'eliminar_estudiante' estudiante.pk %}"
+            class="btn btn-sm btn-danger"
+          >
+            <i class="bi bi-trash"></i>
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        <p><strong>RUT:</strong> {{ estudiante.rut }}</p>
+        <p><strong>Nombre:</strong> {{ estudiante.nombre }}</p>
+        <p><strong>Curso:</strong> {{ estudiante.curso }}</p>
+        <p><strong>Email Principal:</strong> {{ estudiante.email1 }}</p>
+        {% if estudiante.email2 %}
+        <p><strong>Email Secundario:</strong> {{ estudiante.email2 }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title mb-0">Historial de Atrasos</h3>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Curso</th>
+                <th>Justificación</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for atraso in atrasos %}
+              <tr>
+                <td>{{ atraso.fecha|date:"d/m/Y" }}</td>
+                <td>{{ atraso.hora|time:"H:i" }}</td>
+                <td>{{ atraso.curso }}</td>
+                <td>{{ atraso.justificacion|default:"-" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center">
+                  No hay atrasos registrados.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mt-4">
+  <a href="{% url 'lista_estudiantes' %}" class="btn btn-secondary">
+    <i class="bi bi-arrow-left"></i> Volver a la lista
+  </a>
+</div>
+{% endblock %}

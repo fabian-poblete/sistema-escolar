@@ -1,0 +1,36 @@
+{% extends 'registro/base.html' %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header bg-danger text-white">
+        <h3 class="card-title mb-0">Confirmar Eliminación</h3>
+      </div>
+      <div class="card-body">
+        <p class="lead">¿Está seguro que desea eliminar al estudiante?</p>
+        <div class="alert alert-warning">
+          <h5>Información del estudiante:</h5>
+          <p><strong>Nombre:</strong> {{ estudiante.nombre }}</p>
+          <p><strong>RUT:</strong> {{ estudiante.rut }}</p>
+          <p><strong>Curso:</strong> {{ estudiante.curso }}</p>
+        </div>
+        <p class="text-danger">
+          <i class="bi bi-exclamation-triangle"></i>
+          Esta acción no se puede deshacer y también se eliminarán todos los
+          registros de atrasos asociados.
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mt-4">
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-trash"></i> Eliminar
+            </button>
+            <a href="{% url 'lista_estudiantes' %}" class="btn btn-secondary">
+              <i class="bi bi-x-circle"></i> Cancelar
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

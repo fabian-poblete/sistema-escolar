@@ -1,0 +1,172 @@
+{% extends 'registro/base.html' %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Lista de Estudiantes</h2>
+  <div>
+    <a href="{% url 'nuevo_estudiante' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Nuevo Estudiante
+    </a>
+    <button
+      class="btn btn-success"
+      data-bs-toggle="modal"
+      data-bs-target="#uploadModal"
+    >
+      <i class="bi bi-upload"></i> Carga Masiva
+    </button>
+  </div>
+</div>
+
+<!-- Filtro de búsqueda -->
+<div class="mb-4">
+  <form method="GET" action="{% url 'lista_estudiantes' %}">
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        <input
+          type="text"
+          class="form-control"
+          name="nombre"
+          placeholder="Buscar por Nombre"
+          value="{{ request.GET.nombre }}"
+        />
+      </div>
+      <div class="col-md-3 mb-3">
+        <input
+          type="text"
+          class="form-control"
+          name="rut"
+          placeholder="Buscar por RUT"
+          value="{{ request.GET.rut }}"
+        />
+      </div>
+      <div class="col-md-3 mb-3">
+        <input
+          type="text"
+          class="form-control"
+          name="curso"
+          placeholder="Buscar por Curso"
+          value="{{ request.GET.curso }}"
+        />
+      </div>
+      <div class="col-md-2 mb-3">
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-search"></i> Buscar
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>RUT</th>
+        <th>Nombre</th>
+        <th>Curso</th>
+        <th>Email Principal</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for estudiante in estudiantes %}
+      <tr>
+        <td>{{ estudiante.rut }}</td>
+        <td>{{ estudiante.nombre }}</td>
+        <td>{{ estudiante.curso }}</td>
+        <td>{{ estudiante.email1 }}</td>
+        <td>
+          <div class="btn-group" role="group">
+            <a
+              href="{% url 'detalle_estudiante' estudiante.pk %}"
+              class="btn btn-sm btn-info"
+              title="Ver detalles"
+            >
+              <i class="bi bi-eye"></i>
+            </a>
+            <a
+              href="{% url 'editar_estudiante' estudiante.pk %}"
+              class="btn btn-sm btn-warning"
+              title="Editar"
+            >
+              <i class="bi bi-pencil"></i>
+            </a>
+            <a
+              href="{% url 'eliminar_estudiante' estudiante.pk %}"
+              class="btn btn-sm btn-danger"
+              title="Eliminar"
+            >
+              <i class="bi bi-trash"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="text-center">No hay estudiantes registrados.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal para carga masiva -->
+<div
+  class="modal fade"
+  id="uploadModal"
+  tabindex="-1"
+  aria-labelledby="uploadModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="uploadModalLabel">
+          Carga Masiva de Estudiantes
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <p>
+          Descarga el modelo de archivo Excel para completar la carga masiva de
+          estudiantes.
+        </p>
+        <a
+          href="{% url 'descargar_plantilla' %}"
+          class="btn btn-info mb-3"
+          target="_blank"
+          >Descargar Modelo Excel</a
+        >
+        <form
+          method="POST"
+          action="{% url 'carga_masiva_estudiantes' %}"
+          enctype="multipart/form-data"
+        >
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="file" class="form-label"
+              >Selecciona un archivo Excel (.xlsx)</label
+            >
+            <input
+              type="file"
+              name="file"
+              class="form-control"
+              accept=".xlsx"
+              required
+            />
+          </div>
+          <div class="text-end">
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-upload"></i> Subir Archivo
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

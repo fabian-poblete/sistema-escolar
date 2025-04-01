@@ -1,0 +1,53 @@
+{% extends 'registro/base.html' %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 text-center">
+    <h1 class="display-4 mb-4">Bienvenido al Sistema de Atrasos Escolares</h1>
+    <p class="lead">
+      Gestione los atrasos de sus estudiantes de manera eficiente y profesional.
+    </p>
+
+    <div class="row mt-5">
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <i class="bi bi-people-fill display-4 text-primary mb-3"></i>
+            <h5 class="card-title">Gestión de Estudiantes</h5>
+            <p class="card-text">
+              Registre y mantenga la información de sus estudiantes.
+            </p>
+            <a href="{% url 'lista_estudiantes' %}" class="btn btn-primary"
+              >Ver Estudiantes</a
+            >
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <i class="bi bi-clock-history display-4 text-primary mb-3"></i>
+            <h5 class="card-title">Registro de Atrasos</h5>
+            <p class="card-text">
+              Registre los atrasos de sus estudiantes fácilmente.
+            </p>
+            <a href="{% url 'registrar_atraso' %}" class="btn btn-primary"
+              >Registrar Atraso</a
+            >
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <i class="bi bi-file-earmark-text display-4 text-primary mb-3"></i>
+            <h5 class="card-title">Historial de Atrasos</h5>
+            <p class="card-text">Consulte el historial completo de atrasos.</p>
+            <a href="{% url 'lista_atrasos' %}" class="btn btn-primary"
+              >Ver Historial</a
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

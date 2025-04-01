@@ -1,0 +1,77 @@
+{% extends 'registro/base.html' %} {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Historial de Atrasos</h2>
+  <div>
+    <a href="{% url 'registrar_atraso' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Nuevo Atraso
+    </a>
+  </div>
+</div>
+
+<!-- Formulario de Filtro -->
+<form method="GET" class="mb-4">
+  <div class="row">
+    <div class="col-md-3">
+      <input
+        type="text"
+        name="fecha"
+        class="form-control"
+        placeholder="Filtrar por fecha"
+        value="{{ fecha }}"
+      />
+    </div>
+    <div class="col-md-3">
+      <input
+        type="text"
+        name="estudiante"
+        class="form-control"
+        placeholder="Filtrar por estudiante"
+        value="{{ estudiante }}"
+      />
+    </div>
+    <div class="col-md-3">
+      <input
+        type="text"
+        name="curso"
+        class="form-control"
+        placeholder="Filtrar por curso"
+        value="{{ curso }}"
+      />
+    </div>
+    <div class="col-md-3">
+      <button type="submit" class="btn btn-info w-100">
+        <i class="bi bi-search"></i> Buscar
+      </button>
+    </div>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Hora</th>
+        <th>Estudiante</th>
+        <th>Curso</th>
+        <th>Justificación</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for atraso in atrasos %}
+      <tr>
+        <td>{{ atraso.fecha|date:"d/m/Y" }}</td>
+        <td>{{ atraso.hora|time:"H:i" }}</td>
+        <td>{{ atraso.estudiante.nombre }}</td>
+        <td>{{ atraso.curso }}</td>
+        <td>{{ atraso.justificacion|default:"-" }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="text-center">No hay atrasos registrados.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
