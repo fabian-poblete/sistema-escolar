@@ -1,5 +1,9 @@
 from django.db import models
 from django.core.validators import RegexValidator
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from datetime import datetime, time
 
 # Definir cursos con secciones "A" y "B"
 CURSOS_CHILE = [
@@ -14,52 +18,85 @@ CURSOS_CHILE = [
 ]
 
 
-class Estudiante(models.Model):
-    # El RUT almacenado será sin puntos ni guion
-    rut = models.CharField(
-        max_length=10,  # El tamaño será 10, ya que no tendrá los puntos ni el guion
-        unique=True,
-        validators=[
-            RegexValidator(
-                regex=r'^\d{7,8}-[\dkK]$',  # Solo números y guion al final
-                message='El RUT debe tener el formato XXXXXXXXX-X o XXXXXXXXX-K'
-            )
-        ],
-        help_text='Formato: XXXXXXXXX-X o XXXXXXXXX-K (sin puntos ni guion)'
-    )
-    nombre = models.CharField(max_length=100)
-    curso = models.CharField(max_length=20, choices=CURSOS_CHILE)
-    email1 = models.EmailField(verbose_name='Email Principal')
-    email2 = models.EmailField(
-        verbose_name='Email Secundario', blank=True, null=True)
+class Colegio(models.Model):
+    nombre = models.CharField(max_length=200)
+    rut = models.CharField(max_length=20, unique=True)
+    direccion = models.CharField(max_length=200)
+    telefono = models.CharField(max_length=20)
+    email = models.EmailField()
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    activo = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.nombre} - {self.rut} - {self.curso}"
+        return f"{self.nombre} ({self.rut})"
 
     class Meta:
-        verbose_name = 'Estudiante'
-        verbose_name_plural = 'Estudiantes'
-        ordering = ['nombre']
+        verbose_name = "Colegio"
+        verbose_name_plural = "Colegios"
 
-    # Limpiar el RUT antes de guardarlo (eliminando puntos y guion)
-    def save(self, *args, **kwargs):
-        # Eliminar puntos y guion del RUT
-        self.rut = self.rut.replace('.', '').replace('-', '')
-        super(Estudiante, self).save(*args, **kwargs)
+
+class PerfilUsuario(models.Model):
+    usuario = models.OneToOneField(User, on_delete=models.CASCADE)
+    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE)
+    cargo = models.CharField(max_length=100)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.usuario.username} - {self.colegio.nombre}"
+
+    class Meta:
+        verbose_name = "Perfil de Usuario"
+        verbose_name_plural = "Perfiles de Usuario"
+
+
+class Estudiante(models.Model):
+    colegio = models.ForeignKey(
+        Colegio, on_delete=models.CASCADE, related_name='estudiantes')
+    rut = models.CharField(max_length=12, unique=True,
+                           help_text='Formato: 12345678-9')
+    nombre = models.CharField(max_length=200)
+    curso = models.CharField(max_length=50, choices=CURSOS_CHILE)
+    email_principal = models.EmailField()
+    email_secundario = models.EmailField(blank=True, null=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.nombre} - {self.curso}"
+
+    class Meta:
+        verbose_name = "Estudiante"
+        verbose_name_plural = "Estudiantes"
+        ordering = ['curso', 'nombre']
+        unique_together = ['colegio', 'rut']
+        unique_together = ['colegio', 'email_principal']
 
 
 class Atraso(models.Model):
     estudiante = models.ForeignKey(
         Estudiante, on_delete=models.CASCADE, related_name='atrasos')
-    curso = models.CharField(max_length=20, choices=CURSOS_CHILE)
-    fecha = models.DateField(auto_now_add=True)
-    hora = models.TimeField(auto_now_add=True)
-    justificacion = models.TextField(blank=True, null=True)
+    fecha = models.DateField()
+    hora = models.TimeField()
+    curso = models.CharField(max_length=50)
+    motivo = models.TextField(blank=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+    registrado_por = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return f"{self.estudiante.nombre} - {self.fecha} {self.hora}"
 
+    def clean(self):
+        # Validar que la fecha no sea futura
+        if self.fecha > timezone.now().date():
+            raise ValidationError('La fecha no puede ser futura')
+
+        # Asegurarse de que la hora esté establecida
+        if self.hora is None:
+            raise ValidationError('La hora es requerida')
+
     class Meta:
-        verbose_name = 'Atraso'
-        verbose_name_plural = 'Atrasos'
+        verbose_name = "Atraso"
+        verbose_name_plural = "Atrasos"
         ordering = ['-fecha', '-hora']

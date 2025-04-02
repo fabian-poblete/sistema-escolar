@@ -1,172 +1,318 @@
 {% extends 'registro/base.html' %} {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2>Lista de Estudiantes</h2>
-  <div>
-    <a href="{% url 'nuevo_estudiante' %}" class="btn btn-primary">
-      <i class="bi bi-plus-circle"></i> Nuevo Estudiante
-    </a>
-    <button
-      class="btn btn-success"
-      data-bs-toggle="modal"
-      data-bs-target="#uploadModal"
-    >
-      <i class="bi bi-upload"></i> Carga Masiva
-    </button>
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Lista de Estudiantes</h2>
+    <div>
+      <button
+        type="button"
+        class="btn btn-success me-2"
+        data-bs-toggle="modal"
+        data-bs-target="#cargaMasivaModal"
+      >
+        <i class="bi bi-upload"></i> Carga Masiva
+      </button>
+      <a href="{% url 'registrar_estudiante' %}" class="btn btn-primary">
+        <i class="bi bi-person-plus"></i> Nuevo Estudiante
+      </a>
+    </div>
   </div>
-</div>
 
-<!-- Filtro de búsqueda -->
-<div class="mb-4">
-  <form method="GET" action="{% url 'lista_estudiantes' %}">
-    <div class="row">
-      <div class="col-md-4 mb-3">
-        <input
-          type="text"
-          class="form-control"
-          name="nombre"
-          placeholder="Buscar por Nombre"
-          value="{{ request.GET.nombre }}"
-        />
-      </div>
-      <div class="col-md-3 mb-3">
-        <input
-          type="text"
-          class="form-control"
-          name="rut"
-          placeholder="Buscar por RUT"
-          value="{{ request.GET.rut }}"
-        />
-      </div>
-      <div class="col-md-3 mb-3">
-        <input
-          type="text"
-          class="form-control"
-          name="curso"
-          placeholder="Buscar por Curso"
-          value="{{ request.GET.curso }}"
-        />
-      </div>
-      <div class="col-md-2 mb-3">
-        <button type="submit" class="btn btn-primary w-100">
-          <i class="bi bi-search"></i> Buscar
-        </button>
+  <!-- Modal de Carga Masiva -->
+  <div
+    class="modal fade"
+    id="cargaMasivaModal"
+    tabindex="-1"
+    aria-labelledby="cargaMasivaModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="cargaMasivaModalLabel">
+            Carga Masiva de Estudiantes
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          {% if messages %} {% for message in messages %} 
+          {% if 'error' in message.tags %}
+          <div class="alert alert-danger" role="alert">
+            <p class="mb-2">{{ message }}</p>
+            {% if '/estudiantes/descargar-log-errores/' in message %}
+            <a
+              href="{% url 'descargar_log_errores' %}"
+              class="btn btn-outline-danger btn-sm"
+            >
+              <i class="bi bi-download"></i> Descargar reporte de errores
+            </a>
+            {% endif %}
+          </div>
+          {% endif %} {% endfor %} {% endif %}
+          <form
+            method="POST"
+            action="{% url 'carga_masiva_estudiantes' %}"
+            enctype="multipart/form-data"
+            id="formCargaMasiva"
+          >
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="archivo_excel" class="form-label"
+                >Seleccionar archivo Excel</label
+              >
+              <input
+                type="file"
+                class="form-control"
+                id="archivo_excel"
+                name="archivo_excel"
+                accept=".xlsx,.xls"
+                required
+              />
+            </div>
+            <div class="alert alert-info">
+              <h6 class="alert-heading">Instrucciones:</h6>
+              <ol class="mb-0">
+                <li>
+                  Descargue la
+                  <a href="{% url 'descargar_plantilla' %}" class="alert-link"
+                    >plantilla Excel</a
+                  >
+                </li>
+                <li>Complete los datos en la plantilla</li>
+                <li>Suba el archivo completado</li>
+                <li>
+                  En caso de errores, podrá descargar un reporte detallado
+                </li>
+              </ol>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Cancelar
+          </button>
+          <button type="submit" form="formCargaMasiva" class="btn btn-primary">
+            <i class="bi bi-upload"></i> Cargar Estudiantes
+          </button>
+        </div>
       </div>
     </div>
-  </form>
-</div>
+  </div>
 
-<div class="table-responsive">
-  <table class="table table-striped table-hover">
-    <thead>
-      <tr>
-        <th>RUT</th>
-        <th>Nombre</th>
-        <th>Curso</th>
-        <th>Email Principal</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for estudiante in estudiantes %}
-      <tr>
-        <td>{{ estudiante.rut }}</td>
-        <td>{{ estudiante.nombre }}</td>
-        <td>{{ estudiante.curso }}</td>
-        <td>{{ estudiante.email1 }}</td>
-        <td>
-          <div class="btn-group" role="group">
-            <a
-              href="{% url 'detalle_estudiante' estudiante.pk %}"
-              class="btn btn-sm btn-info"
-              title="Ver detalles"
-            >
-              <i class="bi bi-eye"></i>
-            </a>
-            <a
-              href="{% url 'editar_estudiante' estudiante.pk %}"
-              class="btn btn-sm btn-warning"
-              title="Editar"
-            >
-              <i class="bi bi-pencil"></i>
-            </a>
-            <a
-              href="{% url 'eliminar_estudiante' estudiante.pk %}"
-              class="btn btn-sm btn-danger"
-              title="Eliminar"
-            >
-              <i class="bi bi-trash"></i>
-            </a>
-          </div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="5" class="text-center">No hay estudiantes registrados.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+  <!-- Filtros de búsqueda -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="GET" class="row g-3">
+        <div class="col-md-3">
+          <label for="nombre" class="form-label">Nombre</label>
+          <input
+            type="text"
+            class="form-control"
+            id="nombre"
+            name="nombre"
+            value="{{ nombre|default:'' }}"
+            placeholder="Buscar por nombre"
+          />
+        </div>
+        <div class="col-md-2">
+          <label for="rut" class="form-label">RUT</label>
+          <input
+            type="text"
+            class="form-control"
+            id="rut"
+            name="rut"
+            value="{{ rut|default:'' }}"
+            placeholder="Buscar por RUT"
+          />
+        </div>
+        <div class="col-md-2">
+          <label for="curso" class="form-label">Curso</label>
+          <input
+            type="text"
+            class="form-control"
+            id="curso"
+            name="curso"
+            value="{{ curso|default:'' }}"
+            placeholder="Ej: 1° Medio A"
+          />
+        </div>
+        {% if user.is_superuser %}
+        <div class="col-md-3">
+          <label for="colegio" class="form-label">Colegio</label>
+          <input
+            type="text"
+            class="form-control"
+            id="colegio"
+            name="colegio"
+            value="{{ colegio|default:'' }}"
+            placeholder="Buscar por colegio"
+          />
+        </div>
+        {% endif %}
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-search"></i> Buscar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-<!-- Modal para carga masiva -->
-<div
-  class="modal fade"
-  id="uploadModal"
-  tabindex="-1"
-  aria-labelledby="uploadModalLabel"
-  aria-hidden="true"
->
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="uploadModalLabel">
-          Carga Masiva de Estudiantes
-        </h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
-      </div>
-      <div class="modal-body">
-        <p>
-          Descarga el modelo de archivo Excel para completar la carga masiva de
-          estudiantes.
-        </p>
+  <!-- Tabla de estudiantes -->
+  <div class="table-responsive">
+    <table class="table table-striped table-hover">
+      <thead>
+        <tr>
+          <th>RUT</th>
+          <th>Nombre</th>
+          <th>Curso</th>
+          {% if user.is_superuser %}
+          <th>Colegio</th>
+          {% endif %}
+          <th>Email Principal</th>
+          <th>Email Secundario</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for estudiante in estudiantes %}
+        <tr>
+          <td>{{ estudiante.rut }}</td>
+          <td>{{ estudiante.nombre }}</td>
+          <td>{{ estudiante.curso }}</td>
+          {% if user.is_superuser %}
+          <td>{{ estudiante.colegio.nombre }}</td>
+          {% endif %}
+          <td>{{ estudiante.email_principal }}</td>
+          <td>{{ estudiante.email_secundario|default:"-" }}</td>
+          <td>
+            <div class="btn-group" role="group">
+              <a
+                href="{% url 'editar_estudiante' estudiante.id %}"
+                class="btn btn-sm btn-outline-primary"
+                title="Editar"
+              >
+                <i class="bi bi-pencil-square"></i>
+              </a>
+              <a
+                href="{% url 'detalle_estudiante' estudiante.id %}"
+                class="btn btn-sm btn-outline-info ms-1"
+                title="Ver Detalles"
+              >
+                <i class="bi bi-eye"></i>
+              </a>
+              <a
+                href="{% url 'eliminar_estudiante' estudiante.id %}"
+                class="btn btn-sm btn-outline-danger ms-1"
+                title="Eliminar"
+              >
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td
+            colspan="{% if user.is_superuser %}7{% else %}6{% endif %}"
+            class="text-center"
+          >
+            No hay estudiantes registrados
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Paginación -->
+  {% if estudiantes.has_other_pages %}
+  <nav aria-label="Navegación de páginas" class="mt-4">
+    <ul class="pagination justify-content-center">
+      {% if estudiantes.has_previous %}
+      <li class="page-item">
         <a
-          href="{% url 'descargar_plantilla' %}"
-          class="btn btn-info mb-3"
-          target="_blank"
-          >Descargar Modelo Excel</a
+          class="page-link"
+          href="?page={{ estudiantes.previous_page_number }}{% if nombre %}&nombre={{ nombre }}{% endif %}{% if rut %}&rut={{ rut }}{% endif %}{% if curso %}&curso={{ curso }}{% endif %}{% if colegio %}&colegio={{ colegio }}{% endif %}"
         >
-        <form
-          method="POST"
-          action="{% url 'carga_masiva_estudiantes' %}"
-          enctype="multipart/form-data"
+          <i class="bi bi-chevron-left"></i>
+        </a>
+      </li>
+      {% endif %} {% for num in estudiantes.paginator.page_range %} 
+      {% if estudiantes.number == num %}
+      <li class="page-item active">
+        <span class="page-link">{{ num }}</span>
+      </li>
+      {% else %}
+      <li class="page-item">
+        <a
+          class="page-link"
+          href="?page={{ num }}{% if nombre %}&nombre={{ nombre }}{% endif %}{% if rut %}&rut={{ rut }}{% endif %}{% if curso %}&curso={{ curso }}{% endif %}{% if colegio %}&colegio={{ colegio }}{% endif %}"
         >
-          {% csrf_token %}
-          <div class="mb-3">
-            <label for="file" class="form-label"
-              >Selecciona un archivo Excel (.xlsx)</label
-            >
-            <input
-              type="file"
-              name="file"
-              class="form-control"
-              accept=".xlsx"
-              required
-            />
-          </div>
-          <div class="text-end">
-            <button type="submit" class="btn btn-success">
-              <i class="bi bi-upload"></i> Subir Archivo
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
+          {{ num }}
+        </a>
+      </li>
+      {% endif %} {% endfor %} {% if estudiantes.has_next %}
+      <li class="page-item">
+        <a
+          class="page-link"
+          href="?page={{ estudiantes.next_page_number }}{% if nombre %}&nombre={{ nombre }}{% endif %}{% if rut %}&rut={{ rut }}{% endif %}{% if curso %}&curso={{ curso }}{% endif %}{% if colegio %}&colegio={{ colegio }}{% endif %}"
+        >
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
 </div>
 
-{% endblock %}
+{% if messages %}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+  {% for message in messages %}
+  <div
+    class="toast show {% if 'error' in message.tags %}border-danger{% endif %}"
+    role="alert"
+    aria-live="assertive"
+    aria-atomic="true"
+  >
+    <div
+      class="toast-header {% if message.tags %}bg-{{ message.tags }}{% endif %} text-white"
+    >
+      <strong class="me-auto"
+        >{% if 'error' in message.tags %}Error{% else %}Notificación{% endif
+        %}</strong
+      >
+      <button
+        type="button"
+        class="btn-close btn-close-white"
+        data-bs-dismiss="toast"
+        aria-label="Close"
+      ></button>
+    </div>
+    <div class="toast-body">
+      <p class="mb-2">{{ message }}</p>
+      {% if 'error' in message.tags and '/estudiantes/descargar-log-errores/' in
+      message %}
+      <div class="mt-2 pt-2 border-top">
+        <a
+          href="{% url 'descargar_log_errores' %}"
+          class="btn btn-outline-danger btn-sm"
+        >
+          <i class="bi bi-download"></i> Descargar reporte de errores
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %} {% endblock %}

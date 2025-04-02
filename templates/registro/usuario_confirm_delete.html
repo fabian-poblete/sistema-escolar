@@ -1,0 +1,38 @@
+{% extends 'registro/base.html' %} {% block content %}
+<div class="container mt-4">
+  <div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+      <h3 class="mb-0">{{ titulo }}</h3>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-warning">
+        <h4 class="alert-heading mb-3">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          ¿Estás seguro de que deseas eliminar al usuario "
+          {{perfil.usuario.username }}"?
+        </h4>
+        <p>Esta acción no se puede deshacer y eliminará:</p>
+        <ul>
+          <li>La cuenta de usuario</li>
+          <li>El perfil asociado al colegio "{{ perfil.colegio.nombre }}"</li>
+          <li>Todos los registros relacionados</li>
+        </ul>
+      </div>
+
+      <div class="row mt-4">
+        <div class="col-12">
+          <form method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-trash me-2"></i>Confirmar Eliminación
+            </button>
+            <a href="{% url 'lista_usuarios' %}" class="btn btn-secondary ms-2">
+              <i class="bi bi-x-circle me-2"></i>Cancelar
+            </a>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

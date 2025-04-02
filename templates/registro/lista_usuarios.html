@@ -1,0 +1,132 @@
+{% extends 'registro/base.html' %} {% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Lista de Usuarios</h2>
+    <a href="{% url 'registrar_usuario' %}" class="btn btn-primary">
+      <i class="bi bi-person-plus"></i> Nuevo Usuario
+    </a>
+  </div>
+
+  <!-- Buscador -->
+  <div class="mb-4">
+    <form method="GET" action="{% url 'lista_usuarios' %}" class="d-flex">
+      <input
+        type="text"
+        name="q"
+        class="form-control me-2"
+        placeholder="Buscar por nombre de usuario, email o colegio..."
+        value="{{ request.GET.q|default:'' }}"
+      />
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-search"></i> Buscar
+      </button>
+    </form>
+  </div>
+
+  <!-- Tabla de usuarios -->
+  <div class="table-responsive">
+    <table class="table table-striped table-hover">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Email</th>
+          <th>Colegio</th>
+          <th>Cargo</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for perfil in perfiles %}
+        <tr>
+          <td>{{ perfil.usuario.username }}</td>
+          <td>{{ perfil.usuario.email }}</td>
+          <td>{{ perfil.colegio.nombre }}</td>
+          <td>{{ perfil.cargo }}</td>
+          <td>
+            {% if perfil.usuario.is_active %}
+            <span class="badge bg-success">Activo</span>
+            {% else %}
+            <span class="badge bg-danger">Suspendido</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="btn-group" role="group">
+              <a
+                href="{% url 'editar_usuario' perfil.id %}"
+                class="btn btn-sm btn-outline-primary"
+                title="Editar"
+              >
+                <i class="bi bi-pencil-square"></i>
+              </a>
+              <a
+                href="{% url 'toggle_usuario' perfil.id %}"
+                class="btn btn-sm {% if perfil.usuario.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %} ms-1"
+                title="{% if perfil.usuario.is_active %}Suspender{% else %}Activar{% endif %}"
+                onclick="return confirm('¿Estás seguro de que deseas {% if perfil.usuario.is_active %}suspender{% else %}activar{% endif %} este usuario?');"
+              >
+                <i
+                  class="bi {% if perfil.usuario.is_active %}bi-pause-circle{% else %}bi-play-circle{% endif %}"
+                ></i>
+              </a>
+              <a
+                href="{% url 'eliminar_usuario' perfil.id %}"
+                class="btn btn-sm btn-outline-danger ms-1"
+                title="Eliminar"
+              >
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center">No hay usuarios registrados</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Paginación -->
+  {% if perfiles.has_other_pages %}
+  <nav aria-label="Navegación de páginas" class="mt-4">
+    <ul class="pagination justify-content-center">
+      {% if perfiles.has_previous %}
+      <li class="page-item">
+        <a
+          class="page-link"
+          href="?page={{ perfiles.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+        >
+          <i class="bi bi-chevron-left"></i>
+        </a>
+      </li>
+      {% endif %} {% for num in perfiles.paginator.page_range %} 
+      {% if perfiles.number == num %}
+      <li class="page-item active">
+        <span class="page-link">{{ num }}</span>
+      </li>
+      {% else %}
+      <li class="page-item">
+        <a
+          class="page-link"
+          href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+        >
+          {{ num }}
+        </a>
+      </li>
+      {% endif %} {% endfor %} {% if perfiles.has_next %}
+      <li class="page-item">
+        <a
+          class="page-link"
+          href="?page={{ perfiles.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+        >
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

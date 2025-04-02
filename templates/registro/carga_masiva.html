@@ -1,0 +1,71 @@
+{% extends 'registro/base.html' %} {% block content %}
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-body">
+          <h2 class="card-title mb-4">Carga Masiva de Estudiantes</h2>
+
+          {% if messages %}
+          <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="alert alert-info">
+            <h5 class="alert-heading">Instrucciones:</h5>
+            <ol class="mb-0">
+              <li>
+                Descargue la plantilla Excel haciendo clic en el botón
+                "Descargar Plantilla"
+              </li>
+              <li>Complete la plantilla con los datos de los estudiantes</li>
+              <li>
+                Suba el archivo Excel completado usando el formulario a
+                continuación
+              </li>
+            </ol>
+          </div>
+
+          <div class="mb-4">
+            <a href="{% url 'descargar_plantilla' %}" class="btn btn-success">
+              <i class="bi bi-download"></i> Descargar Plantilla
+            </a>
+          </div>
+
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="archivo_excel" class="form-label"
+                >Archivo Excel</label
+              >
+              <input
+                type="file"
+                class="form-control"
+                id="archivo_excel"
+                name="archivo_excel"
+                accept=".xlsx,.xls"
+                required
+              />
+              <div class="form-text">
+                Asegúrese de que el archivo tenga las columnas: RUT, Nombre,
+                Curso, Email Principal, Email Secundario
+              </div>
+            </div>
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-upload"></i> Subir Archivo
+              </button>
+              <a href="{% url 'lista_estudiantes' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

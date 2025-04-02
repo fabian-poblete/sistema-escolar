@@ -1,0 +1,22 @@
+{% extends 'registro/base.html' %} {% block content %}
+<div class="card">
+  <div class="card-body">
+    <h2 class="card-title">Confirmar Eliminación</h2>
+    <p class="card-text">
+      ¿Está seguro que desea eliminar el colegio "{{ colegio.nombre }}"? Esta
+      acción no se puede deshacer.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="d-flex justify-content-between">
+        <a href="{% url 'lista_colegios' %}" class="btn btn-secondary">
+          <i class="bi bi-arrow-left"></i> Cancelar
+        </a>
+        <button type="submit" class="btn btn-danger">
+          <i class="bi bi-trash"></i> Eliminar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

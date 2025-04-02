@@ -1,0 +1,130 @@
+{% extends 'registro/base.html' %} {% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Lista de Colegios</h2>
+    <a href="{% url 'registrar_colegio' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Nuevo Colegio
+    </a>
+  </div>
+
+  <!-- Buscador -->
+  <div class="mb-4">
+    <form method="GET" action="{% url 'lista_colegios' %}" class="d-flex">
+      <input
+        type="text"
+        name="q"
+        class="form-control me-2"
+        placeholder="Buscar por nombre, RUT o email..."
+        value="{{ query|default:'' }}"
+      />
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-search"></i> Buscar
+      </button>
+    </form>
+  </div>
+
+  <!-- Tabla de colegios -->
+  <div class="table-responsive">
+    <table class="table table-striped table-hover">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>RUT</th>
+          <th>Email</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for colegio in colegios %}
+        <tr>
+          <td>{{ colegio.nombre }}</td>
+          <td>{{ colegio.rut }}</td>
+          <td>{{ colegio.email }}</td>
+          <td>
+            {% if colegio.activo %}
+            <span class="badge bg-success">Activo</span>
+            {% else %}
+            <span class="badge bg-danger">Suspendido</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="btn-group" role="group">
+              <a
+                href="{% url 'editar_colegio' colegio.id %}"
+                class="btn btn-sm btn-outline-primary"
+                title="Editar"
+              >
+                <i class="bi bi-pencil-square"></i>
+              </a>
+              <a
+                href="{% url 'toggle_colegio' colegio.id %}"
+                class="btn btn-sm {% if colegio.activo %}btn-outline-warning{% else %}btn-outline-success{% endif %} ms-1"
+                title="{% if colegio.activo %}Suspender{% else %}Activar{% endif %}"
+                onclick="return confirm('¿Estás seguro de que deseas {% if colegio.activo %}suspender{% else %}activar{% endif %} este colegio? {% if colegio.activo %}Esto también suspenderá a todos los usuarios asociados.{% endif %}');"
+              >
+                <i
+                  class="bi {% if colegio.activo %}bi-pause-circle{% else %}bi-play-circle{% endif %}"
+                ></i>
+              </a>
+              <a
+                href="{% url 'eliminar_colegio' colegio.id %}"
+                class="btn btn-sm btn-outline-danger ms-1"
+                title="Eliminar"
+              >
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center">No hay colegios registrados</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Paginación -->
+  {% if colegios.has_other_pages %}
+  <nav aria-label="Navegación de páginas" class="mt-4">
+    <ul class="pagination justify-content-center">
+      {% if colegios.has_previous %}
+      <li class="page-item">
+        <a
+          class="page-link"
+          href="?page={{ colegios.previous_page_number }}{% if query %}&q={{ query }}{% endif %}"
+        >
+          <i class="bi bi-chevron-left"></i>
+        </a>
+      </li>
+      {% endif %} {% for num in colegios.paginator.page_range %} 
+      {% if colegios.number == num %}
+      <li class="page-item active">
+        <span class="page-link">{{ num }}</span>
+      </li>
+      {% else %}
+      <li class="page-item">
+        <a
+          class="page-link"
+          href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}"
+        >
+          {{ num }}
+        </a>
+      </li>
+      {% endif %} {% endfor %} {% if colegios.has_next %}
+      <li class="page-item">
+        <a
+          class="page-link"
+          href="?page={{ colegios.next_page_number }}{% if query %}&q={{ query }}{% endif %}"
+        >
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

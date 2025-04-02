@@ -1,4 +1,4 @@
-{% extends 'registro/base.html' %} {% load crispy_forms_tags %} } 
+{% extends 'registro/base.html' %} {% load crispy_forms_tags %}
 {% block content%}
 <div class="row justify-content-center">
   <div class="col-md-8">
@@ -11,7 +11,16 @@
           <i class="bi bi-clock"></i> Hora actual:
           <span id="current-time"></span>
         </div>
-        <form method="post">
+
+        {% if messages %}
+        <div class="messages">
+          {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" id="atrasoForm">
           {% csrf_token %} {% if form.errors %}
           <div class="alert alert-danger">
             <h5>Por favor, corrija los siguientes errores:</h5>
@@ -19,27 +28,61 @@
           </div>
           {% endif %}
 
+          <!-- Campo oculto para el estudiante -->
+          <input type="hidden" name="estudiante" id="student-id" />
+
           <!-- Campo de búsqueda de estudiante -->
           <div class="mb-3">
-            <label for="student-search" class="form-label">
-              Buscar Estudiante
-            </label>
-            <input
-              type="text"
-              id="student-search"
-              class="form-control"
-              placeholder="Buscar por nombre o RUT"
-              autocomplete="off"
-            />
+            <label for="student-search" class="form-label"
+              >Buscar Estudiante</label
+            >
+            <div class="input-group">
+              <input
+                type="text"
+                id="student-search"
+                class="form-control"
+                placeholder="Buscar por nombre o RUT"
+                autocomplete="off"
+              />
+              <span class="input-group-text">
+                <i class="bi bi-search"></i>
+              </span>
+            </div>
             <div
               id="search-results"
               class="list-group mt-2"
               style="max-height: 200px; overflow-y: auto"
             ></div>
+            <div id="search-status" class="form-text"></div>
           </div>
 
-          <!-- Campo oculto para almacenar el ID del estudiante -->
-          <input type="hidden" name="estudiante_id" id="student-id" />
+          <!-- Campo de curso (se llenará automáticamente) -->
+          <div class="mb-3">
+            <label for="id_curso" class="form-label">Curso</label>
+            <input
+              type="text"
+              name="curso"
+              id="id_curso"
+              class="form-control"
+              readonly
+            />
+          </div>
+
+          <!-- Campo de fecha -->
+          <div class="mb-3">
+            <label for="id_fecha" class="form-label">Fecha</label>
+            <input
+              type="date"
+              name="fecha"
+              id="id_fecha"
+              class="form-control"
+              required
+              value="{% now 'Y-m-d' %}"
+            />
+          </div>
+
+          <!-- Campo de hora (oculto, se actualizará automáticamente) -->
+          <input type="hidden" name="hora" id="id_hora" />
 
           <!-- Campo de justificación -->
           <div class="mb-3">
@@ -47,7 +90,7 @@
               >Justificación</label
             >
             <textarea
-              name="justificacion"
+              name="motivo"
               id="id_justificacion"
               class="form-control"
               rows="3"
@@ -69,62 +112,150 @@
 </div>
 
 <script>
-  function updateTime() {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString("es-CL", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-    document.getElementById("current-time").textContent = timeString;
-  }
+  document.addEventListener("DOMContentLoaded", function () {
+    // Función para actualizar la hora
+    function updateTime() {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString("es-CL", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+      document.getElementById("current-time").textContent = timeString;
 
-  // Actualizar cada segundo
-  updateTime();
-  setInterval(updateTime, 1000);
+      // Actualizar el campo oculto de hora
+      const timeForInput = now.toTimeString().slice(0, 5); // Formato HH:mm
+      document.getElementById("id_hora").value = timeForInput;
+    }
 
-  // Función para buscar estudiantes en tiempo real
-  document
-    .getElementById("student-search")
-    .addEventListener("input", function () {
+    // Actualizar cada segundo
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    const searchInput = document.getElementById("student-search");
+    const searchResults = document.getElementById("search-results");
+    const searchStatus = document.getElementById("search-status");
+    const studentIdInput = document.getElementById("student-id");
+    const cursoInput = document.getElementById("id_curso");
+    const form = document.getElementById("atrasoForm");
+    let searchTimeout;
+
+    // Función para resaltar el texto coincidente
+    function highlightMatch(text, query) {
+      if (!query) return text;
+      const regex = new RegExp(`(${query})`, "gi");
+      return text.replace(regex, "<mark>$1</mark>");
+    }
+
+    // Función para buscar estudiantes
+    function searchStudents(query) {
+      if (query.length < 2) {
+        searchResults.innerHTML = "";
+        searchStatus.textContent = "Escriba al menos 2 caracteres para buscar";
+        return;
+      }
+
+      searchStatus.textContent = "Buscando...";
+      searchResults.innerHTML =
+        '<div class="list-group-item">Buscando...</div>';
+
+      fetch(`/buscar_estudiantes/?q=${encodeURIComponent(query)}`)
+        .then((response) => response.json())
+        .then((data) => {
+          searchResults.innerHTML = "";
+
+          if (data.length > 0) {
+            data.forEach((student) => {
+              const resultItem = document.createElement("a");
+              resultItem.href = "#";
+              resultItem.classList.add(
+                "list-group-item",
+                "list-group-item-action"
+              );
+
+              // Resaltar coincidencias en nombre y RUT
+              const highlightedName = highlightMatch(student.nombre, query);
+              const highlightedRut = highlightMatch(student.rut, query);
+
+              resultItem.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>${highlightedName}</strong>
+                    <br>
+                    <small class="text-muted">${highlightedRut}</small>
+                  </div>
+                  <span class="badge bg-primary">${student.curso}</span>
+                </div>
+              `;
+
+              resultItem.onclick = (e) => {
+                e.preventDefault();
+                selectStudent(
+                  student.id,
+                  student.nombre,
+                  student.rut,
+                  student.curso
+                );
+              };
+
+              searchResults.appendChild(resultItem);
+            });
+            searchStatus.textContent = `Se encontraron ${data.length} resultados`;
+          } else {
+            searchResults.innerHTML =
+              '<div class="list-group-item">No se encontraron resultados</div>';
+            searchStatus.textContent = "No se encontraron coincidencias";
+          }
+        })
+        .catch((error) => {
+          searchResults.innerHTML =
+            '<div class="list-group-item text-danger">Error al buscar estudiantes</div>';
+          searchStatus.textContent = "Error en la búsqueda";
+          console.error("Error:", error);
+        });
+    }
+
+    // Evento de entrada con debounce
+    searchInput.addEventListener("input", function () {
       const query = this.value.trim();
 
-      if (query.length > 2) {
-        // Realizar búsqueda si el texto tiene más de 2 caracteres
-        fetch(`/buscar_estudiantes/?q=${query}`)
-          .then((response) => response.json())
-          .then((data) => {
-            const resultsContainer = document.getElementById("search-results");
-            resultsContainer.innerHTML = ""; // Limpiar resultados anteriores
+      // Limpiar timeout anterior
+      clearTimeout(searchTimeout);
 
-            if (data.length > 0) {
-              data.forEach((student) => {
-                const resultItem = document.createElement("a");
-                resultItem.href = "#";
-                resultItem.classList.add(
-                  "list-group-item",
-                  "list-group-item-action"
-                );
-                resultItem.textContent = `${student.nombre} - ${student.rut}`;
-                resultItem.onclick = () =>
-                  selectStudent(student.id, student.nombre, student.rut);
-                resultsContainer.appendChild(resultItem);
-              });
-            } else {
-              resultsContainer.innerHTML =
-                '<div class="list-group-item">No se encontraron resultados</div>';
-            }
-          });
-      } else {
-        document.getElementById("search-results").innerHTML = ""; // Limpiar resultados si no hay texto
-      }
+      // Establecer nuevo timeout
+      searchTimeout = setTimeout(() => {
+        searchStudents(query);
+      }, 300); // 300ms de delay
     });
 
-  // Función para seleccionar un estudiante
-  function selectStudent(id, nombre, rut) {
-    document.getElementById("student-search").value = `${nombre} - ${rut}`;
-    document.getElementById("student-id").value = id; // Asumiendo que tienes un campo oculto para almacenar el ID
-    document.getElementById("search-results").innerHTML = ""; // Limpiar los resultados
-  }
+    // Función para seleccionar un estudiante
+    function selectStudent(id, nombre, rut, curso) {
+      searchInput.value = `${nombre} - ${rut}`;
+      studentIdInput.value = id;
+      cursoInput.value = curso;
+      searchResults.innerHTML = "";
+      searchStatus.textContent = "Estudiante seleccionado";
+
+      // Agregar clase de éxito al campo de búsqueda
+      searchInput.classList.add("is-valid");
+    }
+
+    // Validación del formulario
+    form.addEventListener("submit", function (e) {
+      if (!studentIdInput.value) {
+        e.preventDefault();
+        alert("Por favor, seleccione un estudiante");
+        searchInput.classList.add("is-invalid");
+        return false;
+      }
+      // Asegurarse de que la hora esté actualizada al momento de enviar
+      updateTime();
+    });
+
+    // Limpiar estado de validación al empezar a escribir
+    searchInput.addEventListener("input", function () {
+      this.classList.remove("is-valid", "is-invalid");
+    });
+  });
 </script>
 {% endblock %}
