@@ -273,46 +273,4 @@
     </ul>
   </nav>
   {% endif %}
-</div>
-
-{% if messages %}
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-  {% for message in messages %}
-  <div
-    class="toast show {% if 'error' in message.tags %}border-danger{% endif %}"
-    role="alert"
-    aria-live="assertive"
-    aria-atomic="true"
-  >
-    <div
-      class="toast-header {% if message.tags %}bg-{{ message.tags }}{% endif %} text-white"
-    >
-      <strong class="me-auto"
-        >{% if 'error' in message.tags %}Error{% else %}Notificación{% endif
-        %}</strong
-      >
-      <button
-        type="button"
-        class="btn-close btn-close-white"
-        data-bs-dismiss="toast"
-        aria-label="Close"
-      ></button>
-    </div>
-    <div class="toast-body">
-      <p class="mb-2">{{ message }}</p>
-      {% if 'error' in message.tags and '/estudiantes/descargar-log-errores/' in
-      message %}
-      <div class="mt-2 pt-2 border-top">
-        <a
-          href="{% url 'descargar_log_errores' %}"
-          class="btn btn-outline-danger btn-sm"
-        >
-          <i class="bi bi-download"></i> Descargar reporte de errores
-        </a>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-  {% endfor %}
-</div>
-{% endif %} {% endblock %}
+{% endblock %}

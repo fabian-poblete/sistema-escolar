@@ -1,28 +1,22 @@
 from datetime import datetime
-from .forms import ColegioForm, RegistroUsuarioForm, EstudianteForm, AtrasoForm
-from .models import Colegio, PerfilUsuario, Estudiante, Atraso
-from django.http import JsonResponse, HttpResponse
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.http import JsonResponse
-from .models import Atraso  # Asumiendo que tienes el modelo Atraso
-from django.http import HttpResponse
-from .models import Estudiante
-import pandas as pd
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import logout as auth_logout
-from .models import Estudiante, Atraso, Colegio, PerfilUsuario
-from .forms import EstudianteForm, AtrasoForm, ColegioForm, RegistroUsuarioForm
-import logging
 import json
+import logging
+import pandas as pd
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse, HttpResponse
+from django.contrib import messages
 from django.urls import reverse
+from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.contrib.auth.decorators import user_passes_test
-from django.contrib.auth import login
+from django.contrib.auth import login, logout as auth_logout
 from django.contrib.auth.forms import AuthenticationForm
-from django.utils import timezone
+from django.contrib.auth.decorators import login_required, user_passes_test
+
+from .forms import ColegioForm, RegistroUsuarioForm, EstudianteForm, AtrasoForm
+from .models import Colegio, PerfilUsuario, Estudiante, Atraso
+
 
 logger = logging.getLogger(__name__)
 
