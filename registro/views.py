@@ -169,34 +169,70 @@ def eliminar_estudiante(request, pk):
 def registrar_atraso(request):
     if request.method == 'POST':
         estudiante_id = request.POST.get('estudiante')
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
         if not estudiante_id:
-            messages.error(request, 'Debe seleccionar un estudiante.')
-            return redirect('registro:registrar_atraso')
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Debe seleccionar un estudiante.'
+                })
+            else:
+                messages.error(request, 'Debe seleccionar un estudiante.')
+                return redirect('registrar_atraso')
 
         try:
             estudiante = Estudiante.objects.get(id=estudiante_id)
-            if not request.user.is_superuser and estudiante.colegio != request.user.colegio:
-                messages.error(
-                    request, 'No tiene permiso para registrar atrasos para este estudiante.')
-                return redirect('registrar_atraso')
 
+            # Verificar permisos
+            if not request.user.is_superuser and estudiante.colegio != request.user.colegio:
+                if is_ajax:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'No tiene permiso para registrar atrasos para este estudiante.'
+                    })
+                else:
+                    messages.error(
+                        request, 'No tiene permiso para registrar atrasos para este estudiante.')
+                    return redirect('registrar_atraso')
+
+            # Obtener fecha y hora
+            fecha = request.POST.get('fecha') or timezone.now().date()
+            hora = request.POST.get('hora') or timezone.now().time()
+
+            # Si se proporciona fecha, convertir de string a date
+            if fecha:
+                try:
+                    fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
+                except ValueError:
+                    fecha = timezone.now().date()
+            else:
+                fecha = timezone.now().date()
+
+            # Si se proporciona hora, convertir de string a time
+            if hora:
+                try:
+                    hora = datetime.strptime(hora, '%H:%M').time()
+                except ValueError:
+                    hora = timezone.now().time()
+            else:
+                hora = timezone.now().time()
+
+            # Crear el registro de atraso
             atraso = Atraso.objects.create(
                 estudiante=estudiante,
-                fecha=timezone.now().date(),
-                hora=timezone.now().time(),
-                motivo=request.POST.get('justificacion', ''),
+                fecha=fecha,
+                hora=hora,
+                motivo=request.POST.get('motivo', ''),
                 registrado_por=request.user
             )
 
+            # Mensaje base de éxito
+            success_message = f'Atraso registrado correctamente para {estudiante.nombre}.'
+            email_status = ''
+
             # Enviar correo de notificación a los apoderados
             if estudiante.email_principal or estudiante.email_secundario:
-                context = {
-                    'estudiante': estudiante,
-                    'atraso': atraso,
-                    'colegio': estudiante.colegio,
-                }
-
-                # Lista de destinatarios
                 recipients = []
                 if estudiante.email_principal:
                     recipients.append(estudiante.email_principal)
@@ -205,45 +241,116 @@ def registrar_atraso(request):
 
                 # Enviar el correo
                 if recipients:
-                    send_mail(
-                        subject=f'Notificación de Atraso - {estudiante.colegio.nombre}',
-                        message=f"""
-                                Estimado/a Apoderado/a,
+                    try:
+                        send_mail(
+                            subject=f'Notificación de Atraso - {estudiante.colegio.nombre}',
+                            message=f"""
+                                    Estimado/a Apoderado/a,
 
-                                Le informamos que el/la estudiante {estudiante.nombre} ha sido registrado/a con un atraso a clases el día {atraso.fecha.strftime('%d/%m/%Y')} a las {atraso.hora.strftime('%H:%M')}.
+                                    Le informamos que el/la estudiante {estudiante.nombre} ha sido registrado/a con un atraso a clases el día {atraso.fecha.strftime('%d/%m/%Y')} a las {atraso.hora.strftime('%H:%M')}.
 
-                                Justificación del atraso: {atraso.motivo if atraso.motivo else "No se ha indicado justificación."}
+                                    Justificación del atraso: {atraso.motivo if atraso.motivo else "No se ha indicado justificación."}
 
-                                Este mensaje ha sido enviado desde el sistema de registro de atrasos del colegio {estudiante.colegio.nombre}.
+                                    Este mensaje ha sido enviado desde el sistema de registro de atrasos del colegio {estudiante.colegio.nombre}.
 
-                                Si tiene dudas o requiere más información, no dude en contactarnos.
+                                    Si tiene dudas o requiere más información, no dude en contactarnos.
 
-                                Atentamente,
-                                Equipo de Convivencia Escolar
-                                {estudiante.colegio.nombre}
-                                """,
-
-                        from_email=settings.EMAIL_HOST_USER,
-                        recipient_list=recipients,
-                        fail_silently=False,
-                    )
-                    messages.success(
-                        request, 'Notificación enviada a los apoderados.')
+                                    Atentamente,
+                                    Equipo de Convivencia Escolar
+                                    {estudiante.colegio.nombre}
+                                    """,
+                            from_email=settings.EMAIL_HOST_USER,
+                            recipient_list=recipients,
+                            fail_silently=False,
+                        )
+                        email_status = 'Notificación enviada a los apoderados.'
+                    except Exception as e:
+                        email_status = f'Error al enviar notificación: {str(e)}'
                 else:
-                    messages.warning(
-                        request, 'No se encontraron correos de apoderados para enviar la notificación.')
+                    email_status = 'No se encontraron correos de apoderados para enviar la notificación.'
 
-            messages.success(request, 'Atraso registrado correctamente.')
-            # return redirect('atraso_list')
+            # Construir mensaje completo
+            full_message = success_message
+            if email_status:
+                full_message = f"{success_message} {email_status}"
+
+            if is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': full_message,
+                    'atraso': {
+                        'id': atraso.id,
+                        'fecha': atraso.fecha.strftime('%d/%m/%Y'),
+                        'hora': atraso.hora.strftime('%H:%M'),
+                        'estudiante': {
+                            'id': estudiante.id,
+                            'nombre': estudiante.nombre,
+                            'curso': estudiante.curso
+                        }
+                    }
+                })
+            else:
+                messages.success(request, full_message)
+                return redirect('registrar_atraso')
 
         except Estudiante.DoesNotExist:
-            messages.error(request, 'Estudiante no encontrado.')
-            return redirect('registrar_atraso')
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Estudiante no encontrado.'
+                })
+            else:
+                messages.error(request, 'Estudiante no encontrado.')
+                return redirect('registrar_atraso')
         except Exception as e:
-            messages.error(request, f'Error al registrar el atraso: {str(e)}')
-            return redirect('registrar_atraso')
+            error_message = f'Error al registrar el atraso: {str(e)}'
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'message': error_message
+                })
+            else:
+                messages.error(request, error_message)
+                return redirect('registrar_atraso')
 
     return render(request, 'registro/atraso_form.html', {'title': 'Registrar Atraso'})
+
+
+@login_required
+def buscar_estudiantes(request):
+    """Vista para buscar estudiantes mediante AJAX"""
+    query = request.GET.get('q', '')
+    if len(query) < 2:
+        return JsonResponse([], safe=False)
+
+    # Obtener colegio del usuario si no es superusuario
+    colegio = None
+    if not request.user.is_superuser and hasattr(request.user, 'perfilusuario'):
+        colegio = request.user.perfilusuario.colegio
+
+    # Filtrar estudiantes
+    estudiantes = Estudiante.objects.filter(
+        Q(nombre__icontains=query) | Q(rut__icontains=query)
+    )
+
+    # Si no es superusuario, filtrar por colegio
+    if colegio and not request.user.is_superuser:
+        estudiantes = estudiantes.filter(colegio=colegio)
+
+    # Limitar resultados
+    estudiantes = estudiantes[:20]
+
+    # Preparar datos para JSON
+    results = []
+    for estudiante in estudiantes:
+        results.append({
+            'id': estudiante.id,
+            'nombre': estudiante.nombre,
+            'rut': estudiante.rut,
+            'curso': estudiante.curso
+        })
+
+    return JsonResponse(results, safe=False)
 
 
 @login_required
@@ -424,49 +531,6 @@ def carga_masiva_estudiantes(request):
         return redirect('lista_estudiantes')
 
     return render(request, 'registro/carga_masiva.html')
-
-
-@login_required
-def buscar_estudiantes(request):
-    try:
-        # Obtener el colegio del usuario
-        colegio = get_colegio_from_user(request.user)
-
-        # Iniciar con todos los estudiantes
-        estudiantes = Estudiante.objects.all()
-
-        # Filtrar por colegio si existe
-        if colegio:
-            estudiantes = estudiantes.filter(colegio=colegio)
-
-        # Obtener el término de búsqueda
-        query = request.GET.get('q', '').strip()
-
-        if query:
-            # Filtrar por nombre o RUT
-            estudiantes = estudiantes.filter(
-                Q(nombre__icontains=query) |
-                Q(rut__icontains=query)
-            )
-
-            # Preparar los resultados
-            resultados = [{
-                'id': estudiante.id,
-                'nombre': estudiante.nombre,
-                'rut': estudiante.rut,
-                'curso': estudiante.curso
-            } for estudiante in estudiantes]
-        else:
-            resultados = []
-
-        return JsonResponse(resultados, safe=False)
-
-    except Exception as e:
-        logger.error(f"Error en buscar_estudiantes: {str(e)}")
-        return JsonResponse({
-            'error': 'Error al buscar estudiantes',
-            'detail': str(e)
-        }, status=500)
 
 
 def es_superusuario(user):

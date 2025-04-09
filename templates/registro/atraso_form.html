@@ -1,4 +1,6 @@
-{% extends 'registro/base.html' %} {% load crispy_forms_tags %} {% block content%}
+{% extends 'registro/base.html' %} 
+{% load crispy_forms_tags %} 
+{% block content%}
 <div class="row justify-content-center">
   <div class="col-md-8">
     <div class="card">
@@ -11,17 +13,9 @@
           <span id="current-time"></span>
         </div>
 
-        <!-- Display Django messages as hidden elements to be processed by JS -->
-        {% if messages %}
-        {% for message in messages %}
-        <div class="django-message d-none" data-type="{% if message.tags %}{{ message.tags }}{% else %}info{% endif %}">
-          {{ message }}
-        </div>
-        {% endfor %}
-        {% endif %}
-
         <form method="post" id="atrasoForm">
-          {% csrf_token %} {% if form.errors %}
+          {% csrf_token %}
+          {% if form.errors %}
           <div class="alert alert-danger">
             <h5>Por favor, corrija los siguientes errores:</h5>
             {{ form.errors }}
@@ -33,9 +27,7 @@
 
           <!-- Campo de búsqueda de estudiante -->
           <div class="mb-3">
-            <label for="student-search" class="form-label"
-              >Buscar Estudiante</label
-            >
+            <label for="student-search" class="form-label">Buscar Estudiante</label>
             <div class="input-group">
               <input
                 type="text"
@@ -86,9 +78,7 @@
 
           <!-- Campo de justificación -->
           <div class="mb-3">
-            <label for="id_justificacion" class="form-label"
-              >Justificación</label
-            >
+            <label for="id_justificacion" class="form-label">Justificación</label>
             <textarea
               name="motivo"
               id="id_justificacion"
@@ -141,6 +131,7 @@
     const form = document.getElementById("atrasoForm");
     const submitButton = document.getElementById("submit-button");
     let searchTimeout;
+    let lastSelectedStudent = null;
 
     // Función para resaltar el texto coincidente
     function highlightMatch(text, query) {
@@ -159,7 +150,7 @@
 
       searchStatus.textContent = "Buscando...";
       searchResults.innerHTML =
-        '<div class="list-group-item">Buscando...</div>';
+        '<div class="list-group-item text-center"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Buscando...</div>';
 
       fetch(`/buscar_estudiantes/?q=${encodeURIComponent(query)}`)
         .then((response) => response.json())
@@ -232,14 +223,18 @@
 
     // Función para seleccionar un estudiante
     function selectStudent(id, nombre, rut, curso) {
+      lastSelectedStudent = { id, nombre, rut, curso };
       searchInput.value = `${nombre} - ${rut}`;
       studentIdInput.value = id;
       cursoInput.value = curso;
       searchResults.innerHTML = "";
-      searchStatus.textContent = "Estudiante seleccionado";
+      searchStatus.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Estudiante seleccionado</span>`;
 
       // Agregar clase de éxito al campo de búsqueda
       searchInput.classList.add("is-valid");
+      
+      // Enfocar el campo de justificación
+      justificacionInput.focus();
     }
 
     // Función para resetear el formulario pero mantener la fecha
@@ -263,6 +258,9 @@
       
       // Actualizar la hora
       updateTime();
+      
+      // Enfocar el campo de búsqueda
+      searchInput.focus();
     }
 
     // Validación y envío del formulario con AJAX
@@ -270,8 +268,13 @@
       e.preventDefault();
       
       if (!studentIdInput.value) {
-        showToast("Por favor, seleccione un estudiante", "error");
+        if (window.showToast) {
+          window.showToast("Por favor, seleccione un estudiante", "error");
+        } else {
+          alert("Por favor, seleccione un estudiante");
+        }
         searchInput.classList.add("is-invalid");
+        searchInput.focus();
         return false;
       }
       
@@ -282,6 +285,9 @@
       submitButton.disabled = true;
       submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Registrando...';
       
+      // Obtener el token CSRF
+      const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      
       // Enviar formulario mediante AJAX
       const formData = new FormData(form);
       
@@ -289,21 +295,61 @@
         method: 'POST',
         body: formData,
         headers: {
-          'X-Requested-With': 'XMLHttpRequest'
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': csrftoken
         }
       })
-      .then(response => response.json())
+      .then(response => {
+        // Manejar respuestas no JSON (como redirecciones o errores 500)
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          return response.json();
+        } else {
+          // Si no es JSON, probablemente sea un error o redirección
+          if (!response.ok) {
+            throw new Error(`Error del servidor: ${response.status}`);
+          }
+          return { success: true, message: "Operación completada" };
+        }
+      })
       .then(data => {
         if (data.success) {
-          showToast(data.message, "success");
+          // Mostrar un toast de éxito
+          if (window.showToast) {
+            window.showToast(data.message || "Atraso registrado correctamente", "success");
+          }
+          
+          // Guardar el último estudiante seleccionado para facilitar múltiples registros
+          const lastStudent = lastSelectedStudent;
+          
+          // Resetear el formulario
           resetForm();
-        } else {
-          showToast(data.message || "Error al registrar el atraso", "error");
-        }
+          
+            // Opcionalmente: preguntar si desea registrar otro atraso para el mismo estudiante
+           // if (lastStudent) {
+             /// setTimeout(() => {
+               // const registerAnother = confirm(`¿Desea registrar otro atraso para ${lastStudent.nombre}?`);
+                //if (registerAnother) {
+                 // selectStudent(lastStudent.id, lastStudent.nombre, lastStudent.rut, lastStudent.curso);
+                //}
+              //}, 300);
+           // }
+         // } else {
+           // // Mostrar un toast de error
+            //if (window.showToast) {
+             // window.showToast(data.message || "Error al registrar el atraso", "error");
+            //} else {
+              //alert(data.message || "Error al registrar el atraso");
+           // }
+          }
       })
       .catch(error => {
         console.error("Error:", error);
-        showToast("Error al procesar la solicitud", "error");
+        if (window.showToast) {
+          window.showToast("Error al procesar la solicitud: " + error.message, "error");
+        } else {
+          alert("Error al procesar la solicitud: " + error.message);
+        }
       })
       .finally(() => {
         // Restaurar el botón
@@ -315,17 +361,6 @@
     // Limpiar estado de validación al empezar a escribir
     searchInput.addEventListener("input", function () {
       this.classList.remove("is-valid", "is-invalid");
-    });
-    
-    // Procesar mensajes de Django al cargar la página
-    const djangoMessages = document.querySelectorAll('.django-message');
-    djangoMessages.forEach(message => {
-      const messageText = message.textContent.trim();
-      const messageType = message.dataset.type || 'info';
-      
-      if (messageText) {
-        showToast(messageText, messageType);
-      }
     });
   });
 </script>

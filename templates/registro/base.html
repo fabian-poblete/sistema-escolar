@@ -13,6 +13,16 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css"
     />
+    <style>
+      /* Estilos para las notificaciones toast */
+      .toast {
+        min-width: 300px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      }
+      .toast-container {
+        z-index: 1050;
+      }
+    </style>
   </head>
 
   <body>
@@ -116,21 +126,8 @@
     </nav>
 
     <div class="container mt-4">
-      {% if messages %} {% for message in messages %}
-      <div
-        class="alert alert-{{ message.tags }} alert-dismissible fade show"
-        role="alert"
-      >
-        {% if 'safe' in message.tags %} {{ message|safe }} {% else %} {{ message}} {% endif %}
-
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="alert"
-          aria-label="Close"
-        ></button>
-      </div>
-      {% endfor %} {% endif %} {% block content %} {% endblock %}
+      <!-- Contenido principal -->
+      {% block content %} {% endblock %}
     </div>
 
     <footer class="footer mt-auto py-3 bg-light">
@@ -141,6 +138,109 @@
       </div>
     </footer>
 
+    <!-- Toast container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+      <!-- Los mensajes de Django se convertirán en toast -->
+      {% if messages %} {% for message in messages %}
+      <div
+        class="django-message"
+        data-message="{{ message }}"
+        data-type="{% if message.tags %}{{ message.tags }}{% else %}info{% endif %}"
+      ></div>
+      {% endfor %} {% endif %}
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Sistema de notificaciones toast -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Inicializar el sistema de toast
+        function showToast(message, type = "info") {
+          // Crear el elemento toast
+          const toastEl = document.createElement("div");
+          toastEl.className = `toast align-items-center border-0 ${getToastClass(
+            type
+          )}`;
+          toastEl.setAttribute("role", "alert");
+          toastEl.setAttribute("aria-live", "assertive");
+          toastEl.setAttribute("aria-atomic", "true");
+          toastEl.setAttribute("data-bs-delay", "5000");
+
+          // Contenido del toast
+          toastEl.innerHTML = `
+            <div class="d-flex">
+              <div class="toast-body">
+                <i class="${getToastIcon(type)} me-2"></i>
+                ${message}
+              </div>
+              <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+          `;
+
+          // Agregar al contenedor
+          const toastContainer = document.querySelector(".toast-container");
+          toastContainer.appendChild(toastEl);
+
+          // Inicializar y mostrar
+          const toast = new bootstrap.Toast(toastEl);
+          toast.show();
+
+          // Eliminar del DOM cuando se oculte
+          toastEl.addEventListener("hidden.bs.toast", function () {
+            toastEl.remove();
+          });
+        }
+
+        // Obtener la clase CSS según el tipo de toast
+        function getToastClass(type) {
+          switch (type) {
+            case "success":
+              return "text-bg-success";
+            case "error":
+            case "danger":
+              return "text-bg-danger";
+            case "warning":
+              return "text-bg-warning";
+            case "info":
+              return "text-bg-info";
+            default:
+              return "text-bg-primary";
+          }
+        }
+
+        // Obtener el icono según el tipo de toast
+        function getToastIcon(type) {
+          switch (type) {
+            case "success":
+              return "bi bi-check-circle-fill";
+            case "error":
+            case "danger":
+              return "bi bi-exclamation-circle-fill";
+            case "warning":
+              return "bi bi-exclamation-triangle-fill";
+            case "info":
+              return "bi bi-info-circle-fill";
+            default:
+              return "bi bi-bell-fill";
+          }
+        }
+
+        // Convertir mensajes de Django en toasts
+        const djangoMessages = document.querySelectorAll(".django-message");
+        djangoMessages.forEach((messageElement) => {
+          const message = messageElement.getAttribute("data-message");
+          const type = messageElement.getAttribute("data-type");
+          if (message) {
+            showToast(message, type);
+          }
+          // Eliminar el elemento después de procesarlo
+          messageElement.remove();
+        });
+
+        // Exponer la función para ser usada desde cualquier parte
+        window.showToast = showToast;
+      });
+    </script>
   </body>
 </html>
