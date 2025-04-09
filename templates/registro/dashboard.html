@@ -1,0 +1,93 @@
+{% extends 'registro/base.html' %} {% block content %}
+<div class="container py-4">
+  <h1 class="display-4 mb-4">Dashboard de Reportes</h1>
+
+  <!-- Estadísticas Generales -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Total de Estudiantes</h5>
+          <h2>{{ total_estudiantes }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Total de Atrasos</h5>
+          <h2>{{ total_atrasos }}</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cursos con Más Atrasos -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Cursos con Más Atrasos</h5>
+    </div>
+    <div class="card-body">
+      <ul>
+        {% for curso in cursos_con_mas_atrasos %}
+        <li>{{ curso.estudiante__curso }}: {{ curso.total }} atrasos</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- Fecha con Más Atrasos -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Fecha con Más Atrasos</h5>
+    </div>
+    <div class="card-body">
+      {% if fecha_con_mas_atrasos %}
+      <p>{{ fecha_con_mas_atrasos.fecha|date:"d/m/Y" }}: {{ fecha_con_mas_atrasos.total }} atrasos</p>
+      {% else %}
+      <p>No hay datos disponibles.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Estudiantes con Más Atrasos -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Estudiantes con Más Atrasos (Globales)</h5>
+    </div>
+    <div class="card-body">
+      <ul>
+        {% for estudiante in estudiantes_con_mas_atrasos_globales %}
+        <li>{{ estudiante.estudiante__nombre }}: {{ estudiante.total }} atrasos</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Estudiantes con Más Atrasos (Semanales)</h5>
+    </div>
+    <div class="card-body">
+      <ul>
+        {% for estudiante in estudiantes_con_mas_atrasos_semanales %}
+        <li>{{ estudiante.estudiante__nombre }}: {{ estudiante.total }} atrasos</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Estudiantes con Más Atrasos (Mensuales)</h5>
+    </div>
+    <div class="card-body">
+      <ul>
+        {% for estudiante in estudiantes_con_mas_atrasos_mensuales %}
+        <li>{{ estudiante.estudiante__nombre }}: {{ estudiante.total }} atrasos</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

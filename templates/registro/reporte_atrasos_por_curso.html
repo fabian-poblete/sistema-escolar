@@ -1,0 +1,207 @@
+{% extends 'registro/base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="display-4 mb-2">Reporte de Atrasos por Curso</h1>
+                <p class="lead text-muted">Estadísticas de atrasos agrupadas por curso</p>
+            </div>
+            <div>
+                <a href="{% url 'reportes' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Volver a Reportes
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-funnel me-2"></i>Filtros</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
+                    <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="{{ fecha_inicio }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="fecha_fin" class="form-label">Fecha Fin</label>
+                    <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" value="{{ fecha_fin }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="curso" class="form-label">Curso</label>
+                    <select class="form-select" id="curso" name="curso">
+                        <option value="">Todos los cursos</option>
+                        {% for curso in cursos %}
+                        <option value="{{ curso }}" {% if curso == curso_seleccionado %}selected{% endif %}>{{ curso }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-2"></i>Aplicar Filtros
+                    </button>
+                    <a href="{% url 'exportar_reporte_excel' 'curso' %}?fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&curso={{ curso_seleccionado }}" class="btn btn-success ms-2">
+                        <i class="bi bi-file-earmark-excel me-2"></i>Exportar a Excel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resumen -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-3">Total de Estudiantes</h6>
+                    <h2 class="mb-0">{{ total_estudiantes }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-3">Total de Atrasos</h6>
+                    <h2 class="mb-0">{{ total_atrasos }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-3">Promedio de Atrasos por Estudiante</h6>
+                    <h2 class="mb-0">{{ promedio_atrasos|floatformat:1 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultados -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-table me-2"></i>Resultados por Curso</h5>
+            <span class="badge bg-primary">{{ reporte_data|length }} cursos con atrasos</span>
+        </div>
+        <div class="card-body p-0">
+            {% if reporte_data %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Curso</th>
+                            <th>Total Estudiantes</th>
+                            <th>Estudiantes con Atrasos</th>
+                            <th>Total Atrasos</th>
+                            <th>% Estudiantes con Atrasos</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in reporte_data %}
+                        <tr>
+                            <td>{{ item.curso }}</td>
+                            <td>{{ item.total_estudiantes }}</td>
+                            <td>{{ item.estudiantes_con_atrasos }}</td>
+                            <td>
+                                <span class="badge bg-{% if item.total_atrasos > 10 %}danger{% elif item.total_atrasos > 5 %}warning{% else %}info{% endif %}">
+                                    {{ item.total_atrasos }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar bg-{% if item.porcentaje > 50 %}danger{% elif item.porcentaje > 25 %}warning{% else %}info{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ item.porcentaje }}%"
+                                         aria-valuenow="{{ item.porcentaje }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ item.porcentaje }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ item.curso|slugify }}" aria-expanded="false" aria-controls="collapse{{ item.curso|slugify }}">
+                                    <i class="bi bi-eye me-1"></i>Ver Detalles
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="6" class="p-0">
+                                <div class="collapse" id="collapse{{ item.curso|slugify }}">
+                                    <div class="card card-body m-2">
+                                        <h6 class="mb-3">Detalle de Estudiantes con Atrasos</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Estudiante</th>
+                                                        <th>RUT</th>
+                                                        <th>Total Atrasos</th>
+                                                        <th>Último Atraso</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for estudiante in item.estudiantes %}
+                                                    <tr>
+                                                        <td>{{ estudiante.nombre }}</td>
+                                                        <td>{{ estudiante.rut }}</td>
+                                                        <td>{{ estudiante.total_atrasos }}</td>
+                                                        <td>{{ estudiante.ultimo_atraso|default:"-" }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">No se encontraron resultados</h5>
+                <p class="text-muted">Intente con otros filtros para ver resultados</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border: none;
+        border-radius: 12px;
+    }
+    
+    .table th {
+        font-weight: 600;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.5em 0.8em;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .progress {
+        border-radius: 10px;
+    }
+    
+    .progress-bar {
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %} 

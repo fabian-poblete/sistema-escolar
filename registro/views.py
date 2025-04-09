@@ -1,4 +1,8 @@
-from datetime import datetime
+from django.shortcuts import render
+from .models import Estudiante, Atraso
+from django.db.models import Count
+from django.contrib.auth.decorators import login_required
+from datetime import datetime, timedelta
 import json
 import logging
 import pandas as pd
@@ -9,7 +13,7 @@ from django.contrib import messages
 from django.urls import reverse
 from django.utils import timezone
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.contrib.auth import login, logout as auth_logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -746,50 +750,405 @@ def toggle_colegio_estado(request, pk):
 
 
 @login_required
-@user_passes_test(es_superusuario)
-def eliminar_usuario(request, pk):
-    perfil = get_object_or_404(PerfilUsuario, pk=pk)
-    if request.method == 'POST':
-        usuario = perfil.usuario
-        nombre_usuario = usuario.username  # Guardamos el nombre antes de eliminar
-        usuario.delete()  # Esto también eliminará el perfil por la relación CASCADE
-        messages.success(
-            request, f'Usuario "{nombre_usuario}" eliminado exitosamente.')
-        return redirect('lista_usuarios')
+def reportes(request):
+    colegio = get_colegio_from_user(request.user)
 
-    return render(request, 'registro/usuario_confirm_delete.html', {
-        'perfil': perfil,
-        'titulo': 'Confirmar Eliminación'
-    })
+    # Obtener estadísticas generales
+    if colegio:
+        total_estudiantes = Estudiante.objects.filter(colegio=colegio).count()
+        total_atrasos = Atraso.objects.filter(
+            estudiante__colegio=colegio).count()
+    else:
+        total_estudiantes = Estudiante.objects.count()
+        total_atrasos = Atraso.objects.count()
 
+    # Datos para gráficos
+    atrasos_por_fecha = Atraso.objects.filter(estudiante__colegio=colegio).values(
+        'fecha').annotate(total=Count('id')).order_by('fecha')
 
-@login_required
-@user_passes_test(es_superusuario)
-def toggle_usuario_estado(request, pk):
-    perfil = get_object_or_404(PerfilUsuario, pk=pk)
-    usuario = perfil.usuario
-    usuario.is_active = not usuario.is_active
-    usuario.save()
+    context = {
+        'colegio': colegio,
+        'total_estudiantes': total_estudiantes,
+        'total_atrasos': total_atrasos,
+        'atrasos_por_fecha': atrasos_por_fecha,
+    }
 
-    estado = "activado" if usuario.is_active else "suspendido"
-    messages.success(
-        request, f'Usuario "{usuario.username}" {estado} exitosamente.')
-    return redirect('lista_usuarios')
+    return render(request, 'registro/reportes.html', context)
 
 
 @login_required
-@user_passes_test(es_superusuario)
-def toggle_colegio_estado(request, pk):
-    colegio = get_object_or_404(Colegio, pk=pk)
-    colegio.activo = not colegio.activo
-    colegio.save()
+def reporte_atrasos_por_estudiante(request):
+    """
+    Genera un reporte de atrasos por estudiante.
+    Permite filtrar por fecha, curso y estudiante.
+    """
+    colegio = get_colegio_from_user(request.user)
 
-    # También actualizar el estado de los usuarios asociados
-    if not colegio.activo:
-        PerfilUsuario.objects.filter(
-            colegio=colegio).update(usuario__is_active=False)
+    # Obtener parámetros de filtrado
+    fecha_inicio = request.GET.get('fecha_inicio', '')
+    fecha_fin = request.GET.get('fecha_fin', '')
+    curso = request.GET.get('curso', '')
+    estudiante_id = request.GET.get('estudiante', '')
 
-    estado = "activado" if colegio.activo else "suspendido"
-    messages.success(
-        request, f'Colegio "{colegio.nombre}" {estado} exitosamente.')
-    return redirect('lista_colegios')
+    # Consulta base
+    if colegio:
+        atrasos = Atraso.objects.filter(estudiante__colegio=colegio)
+    else:
+        atrasos = Atraso.objects.all()
+
+    # Aplicar filtros
+    if fecha_inicio:
+        atrasos = atrasos.filter(fecha__gte=fecha_inicio)
+    if fecha_fin:
+        atrasos = atrasos.filter(fecha__lte=fecha_fin)
+    if curso:
+        atrasos = atrasos.filter(curso=curso)
+    if estudiante_id:
+        atrasos = atrasos.filter(estudiante_id=estudiante_id)
+
+    # Agrupar por estudiante
+    estudiantes = Estudiante.objects.filter(atrasos__in=atrasos).distinct()
+
+    # Preparar datos para el reporte
+    reporte_data = []
+    for estudiante in estudiantes:
+        atrasos_estudiante = atrasos.filter(estudiante=estudiante)
+        reporte_data.append({
+            'estudiante': estudiante,
+            'total_atrasos': atrasos_estudiante.count(),
+            'atrasos': atrasos_estudiante
+        })
+
+    # Obtener cursos para el filtro
+    cursos = []
+    if colegio:
+        cursos = Estudiante.objects.filter(
+            colegio=colegio).values_list('curso', flat=True).distinct()
+    else:
+        cursos = Estudiante.objects.values_list('curso', flat=True).distinct()
+
+    # Obtener estudiantes para el filtro
+    estudiantes_filtro = []
+    if colegio:
+        estudiantes_filtro = Estudiante.objects.filter(colegio=colegio)
+    else:
+        estudiantes_filtro = Estudiante.objects.all()
+
+    context = {
+        'reporte_data': reporte_data,
+        'fecha_inicio': fecha_inicio,
+        'fecha_fin': fecha_fin,
+        'curso_seleccionado': curso,
+        'estudiante_seleccionado': estudiante_id,
+        'cursos': cursos,
+        'estudiantes': estudiantes_filtro,
+        'colegio': colegio,
+    }
+
+    return render(request, 'registro/reporte_atrasos_por_estudiante.html', context)
+
+
+@login_required
+def reporte_atrasos_por_curso(request):
+    colegio = get_colegio_from_user(request.user)
+
+    # Obtener parámetros de filtrado
+    fecha_inicio = request.GET.get('fecha_inicio', '')
+    fecha_fin = request.GET.get('fecha_fin', '')
+
+    # Consulta base
+    if colegio:
+        atrasos = Atraso.objects.filter(estudiante__colegio=colegio)
+    else:
+        atrasos = Atraso.objects.all()
+
+    # Aplicar filtros
+    if fecha_inicio:
+        atrasos = atrasos.filter(fecha__gte=fecha_inicio)
+    if fecha_fin:
+        atrasos = atrasos.filter(fecha__lte=fecha_fin)
+
+    # Obtener cursos
+    cursos = atrasos.values('estudiante__curso').annotate(
+        total=Count('id')).order_by('estudiante__curso')
+
+    # Preparar datos para el reporte
+    reporte_data = []
+    for curso_data in cursos:
+        curso = curso_data['estudiante__curso']
+        atrasos_curso = atrasos.filter(estudiante__curso=curso)
+
+        # Obtener detalles de cada atraso
+        detalles_atrasos = atrasos_curso.select_related('estudiante').values(
+            'estudiante__nombre', 'estudiante__rut', 'fecha', 'hora', 'motivo'
+        )
+
+        reporte_data.append({
+            'curso': curso,
+            'total_atrasos': curso_data['total'],
+            'atrasos': detalles_atrasos
+        })
+
+    context = {
+        'reporte_data': reporte_data,
+        'fecha_inicio': fecha_inicio,
+        'fecha_fin': fecha_fin,
+        'colegio': colegio,
+    }
+
+    return render(request, 'registro/reporte_atrasos_por_curso.html', context)
+
+
+@login_required
+def reporte_atrasos_por_fecha(request):
+    colegio = get_colegio_from_user(request.user)
+
+    # Obtener parámetros de filtrado
+    fecha_inicio = request.GET.get('fecha_inicio', '')
+    fecha_fin = request.GET.get('fecha_fin', '')
+
+    # Consulta base
+    if colegio:
+        atrasos = Atraso.objects.filter(estudiante__colegio=colegio)
+    else:
+        atrasos = Atraso.objects.all()
+
+    # Aplicar filtros
+    if fecha_inicio:
+        atrasos = atrasos.filter(fecha__gte=fecha_inicio)
+    if fecha_fin:
+        atrasos = atrasos.filter(fecha__lte=fecha_fin)
+
+    # Agrupar por fecha
+    fechas = atrasos.values('fecha').annotate(
+        total=Count('id')).order_by('fecha')
+
+    # Preparar datos para el reporte
+    reporte_data = []
+    for fecha_data in fechas:
+        fecha = fecha_data['fecha']
+        atrasos_fecha = atrasos.filter(fecha=fecha)
+
+        # Obtener detalles de cada atraso
+        detalles_atrasos = atrasos_fecha.select_related('estudiante').values(
+            'estudiante__nombre', 'estudiante__rut', 'estudiante__curso', 'hora', 'motivo'
+        )
+
+        reporte_data.append({
+            'fecha': fecha,
+            'total_atrasos': fecha_data['total'],
+            'atrasos': detalles_atrasos
+        })
+
+    context = {
+        'reporte_data': reporte_data,
+        'fecha_inicio': fecha_inicio,
+        'fecha_fin': fecha_fin,
+        'colegio': colegio,
+    }
+
+    return render(request, 'registro/reporte_atrasos_por_fecha.html', context)
+
+
+@login_required
+def exportar_reporte_excel(request, tipo_reporte):
+    """
+    Exporta un reporte a formato Excel.
+    """
+    colegio = get_colegio_from_user(request.user)
+
+    # Obtener parámetros de filtrado
+    fecha_inicio = request.GET.get('fecha_inicio', '')
+    fecha_fin = request.GET.get('fecha_fin', '')
+    curso = request.GET.get('curso', '')
+    estudiante_id = request.GET.get('estudiante', '')
+
+    # Crear un DataFrame de pandas
+    if tipo_reporte == 'estudiante':
+        # Consulta base
+        if colegio:
+            atrasos = Atraso.objects.filter(estudiante__colegio=colegio)
+        else:
+            atrasos = Atraso.objects.all()
+
+        # Aplicar filtros
+        if fecha_inicio:
+            atrasos = atrasos.filter(fecha__gte=fecha_inicio)
+        if fecha_fin:
+            atrasos = atrasos.filter(fecha__lte=fecha_fin)
+        if curso:
+            atrasos = atrasos.filter(curso=curso)
+        if estudiante_id:
+            atrasos = atrasos.filter(estudiante_id=estudiante_id)
+
+        # Preparar datos para el Excel
+        data = []
+        for atraso in atrasos:
+            data.append({
+                'Estudiante': atraso.estudiante.nombre,
+                'RUT': atraso.estudiante.rut,
+                'Curso': atraso.curso,
+                'Fecha': atraso.fecha,
+                'Hora': atraso.hora,
+                'Motivo': atraso.motivo,
+                'Registrado por': atraso.registrado_por.username if atraso.registrado_por else 'N/A'
+            })
+
+        df = pd.DataFrame(data)
+        filename = f'reporte_atrasos_por_estudiante_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+
+    elif tipo_reporte == 'curso':
+        # Consulta base
+        if colegio:
+            atrasos = Atraso.objects.filter(estudiante__colegio=colegio)
+        else:
+            atrasos = Atraso.objects.all()
+
+        # Aplicar filtros
+        if fecha_inicio:
+            atrasos = atrasos.filter(fecha__gte=fecha_inicio)
+        if fecha_fin:
+            atrasos = atrasos.filter(fecha__lte=fecha_fin)
+
+        # Obtener cursos
+        cursos = []
+        if colegio:
+            cursos = Estudiante.objects.filter(
+                colegio=colegio).values_list('curso', flat=True).distinct()
+        else:
+            cursos = Estudiante.objects.values_list(
+                'curso', flat=True).distinct()
+
+        # Preparar datos para el Excel
+        data = []
+        for curso_nombre in cursos:
+            atrasos_curso = atrasos.filter(curso=curso_nombre)
+            estudiantes_curso = Estudiante.objects.filter(curso=curso_nombre)
+            if colegio:
+                estudiantes_curso = estudiantes_curso.filter(colegio=colegio)
+
+            # Calcular estadísticas
+            total_estudiantes = estudiantes_curso.count()
+            total_atrasos = atrasos_curso.count()
+            estudiantes_con_atrasos = estudiantes_curso.filter(
+                atrasos__in=atrasos_curso).distinct().count()
+
+            # Calcular porcentaje de estudiantes con atrasos
+            porcentaje = 0
+            if total_estudiantes > 0:
+                porcentaje = (estudiantes_con_atrasos /
+                              total_estudiantes) * 100
+
+            data.append({
+                'Curso': curso_nombre,
+                'Total Estudiantes': total_estudiantes,
+                'Total Atrasos': total_atrasos,
+                'Estudiantes con Atrasos': estudiantes_con_atrasos,
+                'Porcentaje': round(porcentaje, 2)
+            })
+
+        df = pd.DataFrame(data)
+        filename = f'reporte_atrasos_por_curso_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+
+    elif tipo_reporte == 'fecha':
+        # Consulta base
+        if colegio:
+            atrasos = Atraso.objects.filter(estudiante__colegio=colegio)
+        else:
+            atrasos = Atraso.objects.all()
+
+        # Aplicar filtros
+        if fecha_inicio:
+            atrasos = atrasos.filter(fecha__gte=fecha_inicio)
+        if fecha_fin:
+            atrasos = atrasos.filter(fecha__lte=fecha_fin)
+
+        # Agrupar por fecha
+        fechas = atrasos.values('fecha').annotate(
+            total=Count('id')).order_by('fecha')
+
+        # Preparar datos para el Excel
+        data = []
+        for fecha_data in fechas:
+            fecha = fecha_data['fecha']
+            atrasos_fecha = atrasos.filter(fecha=fecha)
+
+            # Agrupar por curso
+            cursos = atrasos_fecha.values('curso').annotate(
+                total=Count('id')).order_by('curso')
+
+            for curso_data in cursos:
+                data.append({
+                    'Fecha': fecha,
+                    'Curso': curso_data['curso'],
+                    'Total Atrasos': curso_data['total']
+                })
+
+        df = pd.DataFrame(data)
+        filename = f'reporte_atrasos_por_fecha_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+
+    else:
+        return HttpResponse("Tipo de reporte no válido", status=400)
+
+    # Crear el archivo Excel
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    # Escribir el DataFrame a un archivo Excel
+    df.to_excel(response, index=False)
+
+    return response
+
+
+@login_required
+def dashboard(request):
+    colegio = get_colegio_from_user(request.user)
+
+    # Obtener estadísticas generales
+    if colegio:
+        total_estudiantes = Estudiante.objects.filter(colegio=colegio).count()
+        total_atrasos = Atraso.objects.filter(
+            estudiante__colegio=colegio).count()
+    else:
+        total_estudiantes = Estudiante.objects.count()
+        total_atrasos = Atraso.objects.count()
+
+    # Datos para el gráfico de atrasos por fecha
+    atrasos_por_fecha = Atraso.objects.filter(estudiante__colegio=colegio).values(
+        'fecha').annotate(total=Count('id')).order_by('fecha')
+
+    # Cursos con más atrasos
+    cursos_con_mas_atrasos = Atraso.objects.filter(estudiante__colegio=colegio).values(
+        'estudiante__curso').annotate(total=Count('id')).order_by('-total')[:5]
+
+    # Fecha con más atrasos
+    fecha_con_mas_atrasos = atrasos_por_fecha.order_by('-total').first()
+
+    # Estudiantes con más atrasos globales
+    estudiantes_con_mas_atrasos_globales = Atraso.objects.filter(estudiante__colegio=colegio).values(
+        'estudiante__nombre').annotate(total=Count('id')).order_by('-total')[:5]
+
+    # Estudiantes con más atrasos semanales
+    last_week = timezone.now() - timedelta(days=7)
+    estudiantes_con_mas_atrasos_semanales = Atraso.objects.filter(estudiante__colegio=colegio, fecha__gte=last_week).values(
+        'estudiante__nombre').annotate(total=Count('id')).order_by('-total')[:5]
+
+    # Estudiantes con más atrasos mensuales
+    last_month = timezone.now() - timedelta(days=30)
+    estudiantes_con_mas_atrasos_mensuales = Atraso.objects.filter(estudiante__colegio=colegio, fecha__gte=last_month).values(
+        'estudiante__nombre').annotate(total=Count('id')).order_by('-total')[:5]
+
+    context = {
+        'total_estudiantes': total_estudiantes,
+        'total_atrasos': total_atrasos,
+        'fechas': [item['fecha'].strftime("%d/%m/%Y") for item in atrasos_por_fecha],
+        'atrasos': [item['total'] for item in atrasos_por_fecha],
+        'cursos_con_mas_atrasos': cursos_con_mas_atrasos,
+        'fecha_con_mas_atrasos': fecha_con_mas_atrasos,
+        'estudiantes_con_mas_atrasos_globales': estudiantes_con_mas_atrasos_globales,
+        'estudiantes_con_mas_atrasos_semanales': estudiantes_con_mas_atrasos_semanales,
+        'estudiantes_con_mas_atrasos_mensuales': estudiantes_con_mas_atrasos_mensuales,
+    }
+
+    return render(request, 'registro/dashboard.html', context)

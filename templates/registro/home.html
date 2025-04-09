@@ -1,313 +1,252 @@
 {% extends 'registro/base.html' %} {% block content %}
-<div class="container">
-  <div class="row justify-content-center">
-    <div class="col-lg-10">
-      <div class="text-center mb-5">
-        <div class="hero-section">
-          <h1 class="display-4 mb-3">Sistema de Atrasos Escolares</h1>
-          <p class="lead text-muted">
-            Gestione los atrasos de sus estudiantes de manera eficiente y
-            profesional
-          </p>
-        </div>
-      </div>
+<div class="container py-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <h1 class="display-4 mb-2">Sistema de Registro de Atrasos</h1>
+      <p class="lead text-muted">
+        Gestione eficientemente los atrasos de los estudiantes
+      </p>
+    </div>
+  </div>
 
-      {% if user.is_authenticated %}
-      <div class="row g-4">
-        <div class="col-md-4">
-          <div class="feature-card">
-            <div class="card-icon">
-              <i class="bi bi-people-fill"></i>
-            </div>
-            <h5 class="card-title">Gestión de Estudiantes</h5>
-            <p class="card-text">
-              Administre la información de sus estudiantes de manera
-              centralizada y eficiente.
-            </p>
+  {% if user.is_authenticated %}
+  <div class="row g-4 mb-5">
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="icon-circle mb-3 bg-primary bg-opacity-10 text-primary">
+            <i class="bi bi-person-plus"></i>
+          </div>
+          <h5 class="card-title">Gestión de Estudiantes</h5>
+          <p class="card-text">
+            Registre, edite y administre la información de los estudiantes en el
+            sistema.
+          </p>
+          <div class="mt-auto pt-3">
             <a
               href="{% url 'lista_estudiantes' %}"
               class="btn btn-primary w-100"
             >
-              <i class="bi bi-arrow-right-circle me-2"></i>Ver Estudiantes
+              <i class="bi bi-people me-2"></i>Ver Estudiantes
             </a>
           </div>
         </div>
-
-        <div class="col-md-4">
-          <div class="feature-card">
-            <div class="card-icon">
-              <i class="bi bi-clock-history"></i>
-            </div>
-            <h5 class="card-title">Registro de Atrasos</h5>
-            <p class="card-text">
-              Registre y gestione los atrasos de sus estudiantes de forma rápida
-              y sencilla.
-            </p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="icon-circle mb-3 bg-success bg-opacity-10 text-success">
+            <i class="bi bi-clock"></i>
+          </div>
+          <h5 class="card-title">Registro de Atrasos</h5>
+          <p class="card-text">
+            Registre atrasos de estudiantes de manera rápida y eficiente.
+          </p>
+          <div class="mt-auto pt-3">
             <a
               href="{% url 'registrar_atraso' %}"
-              class="btn btn-primary w-100"
+              class="btn btn-success w-100"
             >
               <i class="bi bi-plus-circle me-2"></i>Registrar Atraso
             </a>
           </div>
         </div>
-
-        <div class="col-md-4">
-          <div class="feature-card">
-            <div class="card-icon">
-              <i class="bi bi-file-earmark-text"></i>
-            </div>
-            <h5 class="card-title">Historial de Atrasos</h5>
-            <p class="card-text">
-              Consulte y analice el historial completo de atrasos de sus
-              estudiantes.
-            </p>
-            <a href="{% url 'lista_atrasos' %}" class="btn btn-primary w-100">
-              <i class="bi bi-search me-2"></i>Ver Historial
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="icon-circle mb-3 bg-info bg-opacity-10 text-info">
+            <i class="bi bi-clock-history"></i>
+          </div>
+          <h5 class="card-title">Historial de Atrasos</h5>
+          <p class="card-text">
+            Consulte el historial completo de atrasos registrados en el sistema.
+          </p>
+          <div class="mt-auto pt-3">
+            <a href="{% url 'lista_atrasos' %}" class="btn btn-info w-100">
+              <i class="bi bi-list-ul me-2"></i>Ver Historial
             </a>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body d-flex flex-column">
+        <div class="icon-circle mb-3 bg-dark bg-opacity-10 text-dark">
+          <i class="bi bi-speedometer2"></i>
+        </div>
+        <h5 class="card-title">Dashboard</h5>
+        <p class="card-text">
+          Accede al dashboard para ver estadísticas en tiempo real.
+        </p>
+        <div class="mt-auto pt-3">
+          <a href="{% url 'dashboard' %}" class="btn btn-dark w-100">
+            <i class="bi bi-speedometer2 me-2"></i>Ver Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 
-      {% if total_estudiantes or total_atrasos %}
-      <div class="row mt-5">
-        <div class="col-12">
-          <div class="stats-card">
-            <div class="row text-center">
-              <div class="col-md-6">
-                <div class="stat-item">
-                  <div class="stat-icon">
-                    <i class="bi bi-people"></i>
-                  </div>
-                  <h3 class="stat-number">{{ total_estudiantes }}</h3>
-                  <p class="stat-label">Estudiantes Registrados</p>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="stat-item">
-                  <div class="stat-icon">
-                    <i class="bi bi-clock"></i>
-                  </div>
-                  <h3 class="stat-number">{{ total_atrasos }}</h3>
-                  <p class="stat-label">Atrasos Registrados</p>
-                </div>
-              </div>
-            </div>
+  <!-- Sección de Reportes -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <h2 class="h3 mb-3">Reportes y Estadísticas</h2>
+      <p class="text-muted">
+        Acceda a reportes detallados sobre los atrasos registrados en el
+        sistema.
+      </p>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-5">
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="icon-circle mb-3 bg-warning bg-opacity-10 text-warning">
+            <i class="bi bi-person-lines-fill"></i>
+          </div>
+          <h5 class="card-title">Atrasos por Estudiante</h5>
+          <p class="card-text">
+            Reporte detallado de atrasos agrupados por estudiante, con opciones
+            de filtrado.
+          </p>
+          <div class="mt-auto pt-3">
+            <a
+              href="{% url 'reporte_atrasos_por_estudiante' %}"
+              class="btn btn-warning w-100"
+            >
+              <i class="bi bi-file-earmark-text me-2"></i>Ver Reporte
+            </a>
           </div>
         </div>
       </div>
-      {% endif %} {% else %}
-      <div class="text-center mt-5">
-        <div class="welcome-card">
-          <div class="welcome-icon">
-            <i class="bi bi-door-open"></i>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div class="icon-circle mb-3 bg-danger bg-opacity-10 text-danger">
+            <i class="bi bi-people-fill"></i>
           </div>
-          <h2 class="mb-4">Bienvenido al Sistema</h2>
+          <h5 class="card-title">Atrasos por Curso</h5>
+          <p class="card-text">
+            Estadísticas de atrasos agrupadas por curso, incluyendo totales y
+            porcentajes.
+          </p>
+          <div class="mt-auto pt-3">
+            <a
+              href="{% url 'reporte_atrasos_por_curso' %}"
+              class="btn btn-danger w-100"
+            >
+              <i class="bi bi-file-earmark-text me-2"></i>Ver Reporte
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <div
+            class="icon-circle mb-3 bg-secondary bg-opacity-10 text-secondary"
+          >
+            <i class="bi bi-calendar-check"></i>
+          </div>
+          <h5 class="card-title">Atrasos por Fecha</h5>
+          <p class="card-text">
+            Análisis temporal de atrasos, mostrando la distribución por fecha y
+            curso.
+          </p>
+          <div class="mt-auto pt-3">
+            <a
+              href="{% url 'reporte_atrasos_por_fecha' %}"
+              class="btn btn-secondary w-100"
+            >
+              <i class="bi bi-file-earmark-text me-2"></i>Ver Reporte
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estadísticas -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <h2 class="h3 mb-3">Resumen del Sistema</h2>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title text-muted mb-3">Estudiantes Registrados</h5>
+          <h2 class="display-4 mb-0">{{ total_estudiantes }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title text-muted mb-3">Total de Atrasos</h5>
+          <h2 class="display-4 mb-0">{{ total_atrasos }}</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+      <div class="card shadow-sm">
+        <div class="card-body py-5">
+          <div
+            class="icon-circle mb-4 bg-primary bg-opacity-10 text-primary mx-auto"
+          >
+            <i class="bi bi-person-circle"></i>
+          </div>
+          <h3 class="mb-3">Bienvenido al Sistema de Registro de Atrasos</h3>
           <p class="lead mb-4">
-            Por favor, inicie sesión para acceder a todas las funcionalidades.
+            Para acceder a todas las funcionalidades, por favor inicie sesión.
           </p>
           <a href="{% url 'login' %}" class="btn btn-primary btn-lg">
             <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
           </a>
         </div>
       </div>
-      {% endif %}
     </div>
   </div>
+  {% endif %}
 </div>
 
 <style>
-  .hero-section {
-    padding: 3rem 0;
-    background: linear-gradient(
-      135deg,
-      rgba(67, 97, 238, 0.1),
-      rgba(63, 55, 201, 0.1)
-    );
-    border-radius: var(--border-radius);
-    margin-bottom: 2rem;
-  }
-
-  .feature-card {
-    background: white;
-    border-radius: var(--border-radius);
-    padding: 2rem;
-    height: 100%;
-    box-shadow: var(--box-shadow);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .feature-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
-  }
-
-  .feature-card::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    background: linear-gradient(
-      90deg,
-      var(--primary-color),
-      var(--secondary-color)
-    );
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .feature-card:hover::before {
-    opacity: 1;
-  }
-
-  .card-icon {
+  .icon-circle {
     width: 60px;
     height: 60px;
-    background: linear-gradient(
-      135deg,
-      rgba(67, 97, 238, 0.1),
-      rgba(63, 55, 201, 0.1)
-    );
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1.5rem;
-  }
-
-  .card-icon i {
-    font-size: 1.8rem;
-    color: var(--primary-color);
-  }
-
-  .card-title {
-    font-weight: 600;
-    margin-bottom: 1rem;
-    color: var(--text-color);
-  }
-
-  .card-text {
-    color: var(--text-color);
-    opacity: 0.8;
-    margin-bottom: 1.5rem;
-  }
-
-  .stats-card {
-    background: white;
-    border-radius: var(--border-radius);
-    padding: 2rem;
-    box-shadow: var(--box-shadow);
-  }
-
-  .stat-item {
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
-    background: linear-gradient(
-      135deg,
-      rgba(67, 97, 238, 0.05),
-      rgba(63, 55, 201, 0.05)
-    );
-    transition: all 0.3s ease;
-  }
-
-  .stat-item:hover {
-    transform: translateY(-3px);
-    background: linear-gradient(
-      135deg,
-      rgba(67, 97, 238, 0.1),
-      rgba(63, 55, 201, 0.1)
-    );
-  }
-
-  .stat-icon {
-    width: 50px;
-    height: 50px;
-    background: white;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1rem;
-    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.1);
-  }
-
-  .stat-icon i {
-    font-size: 1.5rem;
-    color: var(--primary-color);
-  }
-
-  .stat-number {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    margin-bottom: 0.5rem;
-  }
-
-  .stat-label {
-    color: var(--text-color);
-    opacity: 0.8;
-    margin: 0;
-  }
-
-  .welcome-card {
-    background: white;
-    border-radius: var(--border-radius);
-    padding: 3rem;
-    box-shadow: var(--box-shadow);
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  .welcome-icon {
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(
-      135deg,
-      rgba(67, 97, 238, 0.1),
-      rgba(63, 55, 201, 0.1)
-    );
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 2rem;
+    font-size: 1.5rem;
   }
 
-  .welcome-icon i {
-    font-size: 2.5rem;
-    color: var(--primary-color);
+  .card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
   }
 
   .btn {
-    padding: 0.8rem 1.5rem;
-    font-weight: 500;
     border-radius: 8px;
-  }
-
-  .btn i {
-    font-size: 1.1rem;
-  }
-
-  @media (max-width: 768px) {
-    .hero-section {
-      padding: 2rem 0;
-    }
-
-    .feature-card {
-      padding: 1.5rem;
-    }
-
-    .stat-item {
-      margin-bottom: 1rem;
-    }
-
-    .welcome-card {
-      padding: 2rem;
-    }
+    padding: 0.6rem 1.2rem;
+    font-weight: 500;
   }
 </style>
 {% endblock %}

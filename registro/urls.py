@@ -46,4 +46,18 @@ urlpatterns = [
     path('atrasos/nuevo/', views.registrar_atraso, name='registrar_atraso'),
     path('colegios/toggle/<int:pk>/',
          views.toggle_colegio_estado, name='toggle_colegio'),
+
+    # URLs de reportes
+    path('reportes/', views.reportes, name='reportes'),
+    path('reportes/atrasos-por-estudiante/', views.reporte_atrasos_por_estudiante,
+         name='reporte_atrasos_por_estudiante'),
+    path('reportes/atrasos-por-curso/', views.reporte_atrasos_por_curso,
+         name='reporte_atrasos_por_curso'),
+    path('reportes/atrasos-por-fecha/', views.reporte_atrasos_por_fecha,
+         name='reporte_atrasos_por_fecha'),
+    path('reportes/exportar/<str:tipo_reporte>/',
+         views.exportar_reporte_excel, name='exportar_reporte_excel'),
+
+    # URLs de dashboard
+    path('dashboard/', views.dashboard, name='dashboard'),
 ]
