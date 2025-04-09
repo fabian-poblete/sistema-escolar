@@ -1,5 +1,4 @@
-{% extends 'registro/base.html' %} {% load crispy_forms_tags %}
-{% block content%}
+{% extends 'registro/base.html' %} {% load crispy_forms_tags %} {% block content%}
 <div class="row justify-content-center">
   <div class="col-md-8">
     <div class="card">
@@ -12,12 +11,13 @@
           <span id="current-time"></span>
         </div>
 
+        <!-- Display Django messages as hidden elements to be processed by JS -->
         {% if messages %}
-        <div class="messages">
-          {% for message in messages %}
-          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-          {% endfor %}
+        {% for message in messages %}
+        <div class="django-message d-none" data-type="{% if message.tags %}{{ message.tags }}{% else %}info{% endif %}">
+          {{ message }}
         </div>
+        {% endfor %}
         {% endif %}
 
         <form method="post" id="atrasoForm">
@@ -98,7 +98,7 @@
           </div>
 
           <div class="mt-4">
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" id="submit-button">
               <i class="bi bi-check-circle"></i> Registrar Atraso
             </button>
             <a href="{% url 'lista_atrasos' %}" class="btn btn-secondary">
@@ -137,7 +137,9 @@
     const searchStatus = document.getElementById("search-status");
     const studentIdInput = document.getElementById("student-id");
     const cursoInput = document.getElementById("id_curso");
+    const justificacionInput = document.getElementById("id_justificacion");
     const form = document.getElementById("atrasoForm");
+    const submitButton = document.getElementById("submit-button");
     let searchTimeout;
 
     // Función para resaltar el texto coincidente
@@ -240,21 +242,90 @@
       searchInput.classList.add("is-valid");
     }
 
-    // Validación del formulario
+    // Función para resetear el formulario pero mantener la fecha
+    function resetForm() {
+      const currentDate = document.getElementById("id_fecha").value;
+      
+      // Limpiar campos
+      searchInput.value = "";
+      studentIdInput.value = "";
+      cursoInput.value = "";
+      justificacionInput.value = "";
+      
+      // Restaurar la fecha actual
+      document.getElementById("id_fecha").value = currentDate;
+      
+      // Eliminar clases de validación
+      searchInput.classList.remove("is-valid", "is-invalid");
+      
+      // Actualizar estado de búsqueda
+      searchStatus.textContent = "";
+      
+      // Actualizar la hora
+      updateTime();
+    }
+
+    // Validación y envío del formulario con AJAX
     form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      
       if (!studentIdInput.value) {
-        e.preventDefault();
-        alert("Por favor, seleccione un estudiante");
+        showToast("Por favor, seleccione un estudiante", "error");
         searchInput.classList.add("is-invalid");
         return false;
       }
+      
       // Asegurarse de que la hora esté actualizada al momento de enviar
       updateTime();
+      
+      // Cambiar estado del botón
+      submitButton.disabled = true;
+      submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Registrando...';
+      
+      // Enviar formulario mediante AJAX
+      const formData = new FormData(form);
+      
+      fetch(form.action || window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showToast(data.message, "success");
+          resetForm();
+        } else {
+          showToast(data.message || "Error al registrar el atraso", "error");
+        }
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        showToast("Error al procesar la solicitud", "error");
+      })
+      .finally(() => {
+        // Restaurar el botón
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="bi bi-check-circle"></i> Registrar Atraso';
+      });
     });
 
     // Limpiar estado de validación al empezar a escribir
     searchInput.addEventListener("input", function () {
       this.classList.remove("is-valid", "is-invalid");
+    });
+    
+    // Procesar mensajes de Django al cargar la página
+    const djangoMessages = document.querySelectorAll('.django-message');
+    djangoMessages.forEach(message => {
+      const messageText = message.textContent.trim();
+      const messageType = message.dataset.type || 'info';
+      
+      if (messageText) {
+        showToast(messageText, messageType);
+      }
     });
   });
 </script>

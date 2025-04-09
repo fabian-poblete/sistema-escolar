@@ -13,6 +13,9 @@ from django.db.models import Q
 from django.contrib.auth import login, logout as auth_logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.conf import settings
 
 from .forms import ColegioForm, RegistroUsuarioForm, EstudianteForm, AtrasoForm
 from .models import Colegio, PerfilUsuario, Estudiante, Atraso
@@ -164,24 +167,83 @@ def eliminar_estudiante(request, pk):
 
 @login_required
 def registrar_atraso(request):
-    # Obtener el colegio del usuario
-    colegio = get_colegio_from_user(request.user)
-
     if request.method == 'POST':
-        form = AtrasoForm(request.POST, colegio=colegio)
-        if form.is_valid():
-            atraso = form.save(commit=False)
-            atraso.registrado_por = request.user
-            # Asegurarse de que la hora esté establecida
-            if not atraso.hora:
-                atraso.hora = timezone.now().time()
-            atraso.save()
-            messages.success(request, 'Atraso registrado exitosamente.')
-            return redirect('lista_atrasos')
-    else:
-        form = AtrasoForm(colegio=colegio)
+        estudiante_id = request.POST.get('estudiante')
+        if not estudiante_id:
+            messages.error(request, 'Debe seleccionar un estudiante.')
+            return redirect('registro:registrar_atraso')
 
-    return render(request, 'registro/atraso_form.html', {'form': form})
+        try:
+            estudiante = Estudiante.objects.get(id=estudiante_id)
+            if not request.user.is_superuser and estudiante.colegio != request.user.colegio:
+                messages.error(
+                    request, 'No tiene permiso para registrar atrasos para este estudiante.')
+                return redirect('registrar_atraso')
+
+            atraso = Atraso.objects.create(
+                estudiante=estudiante,
+                fecha=timezone.now().date(),
+                hora=timezone.now().time(),
+                motivo=request.POST.get('justificacion', ''),
+                registrado_por=request.user
+            )
+
+            # Enviar correo de notificación a los apoderados
+            if estudiante.email_principal or estudiante.email_secundario:
+                context = {
+                    'estudiante': estudiante,
+                    'atraso': atraso,
+                    'colegio': estudiante.colegio,
+                }
+
+                # Lista de destinatarios
+                recipients = []
+                if estudiante.email_principal:
+                    recipients.append(estudiante.email_principal)
+                if estudiante.email_secundario:
+                    recipients.append(estudiante.email_secundario)
+
+                # Enviar el correo
+                if recipients:
+                    send_mail(
+                        subject=f'Notificación de Atraso - {estudiante.colegio.nombre}',
+                        message=f"""
+                                Estimado/a Apoderado/a,
+
+                                Le informamos que el/la estudiante {estudiante.nombre} ha sido registrado/a con un atraso a clases el día {atraso.fecha.strftime('%d/%m/%Y')} a las {atraso.hora.strftime('%H:%M')}.
+
+                                Justificación del atraso: {atraso.motivo if atraso.motivo else "No se ha indicado justificación."}
+
+                                Este mensaje ha sido enviado desde el sistema de registro de atrasos del colegio {estudiante.colegio.nombre}.
+
+                                Si tiene dudas o requiere más información, no dude en contactarnos.
+
+                                Atentamente,
+                                Equipo de Convivencia Escolar
+                                {estudiante.colegio.nombre}
+                                """,
+
+                        from_email=settings.EMAIL_HOST_USER,
+                        recipient_list=recipients,
+                        fail_silently=False,
+                    )
+                    messages.success(
+                        request, 'Notificación enviada a los apoderados.')
+                else:
+                    messages.warning(
+                        request, 'No se encontraron correos de apoderados para enviar la notificación.')
+
+            messages.success(request, 'Atraso registrado correctamente.')
+            # return redirect('atraso_list')
+
+        except Estudiante.DoesNotExist:
+            messages.error(request, 'Estudiante no encontrado.')
+            return redirect('registrar_atraso')
+        except Exception as e:
+            messages.error(request, f'Error al registrar el atraso: {str(e)}')
+            return redirect('registrar_atraso')
+
+    return render(request, 'registro/atraso_form.html', {'title': 'Registrar Atraso'})
 
 
 @login_required
@@ -567,6 +629,56 @@ def editar_usuario(request, pk):
         'titulo': 'Editar Usuario',
         'is_edit': True
     })
+
+
+@login_required
+@user_passes_test(es_superusuario)
+def eliminar_usuario(request, pk):
+    perfil = get_object_or_404(PerfilUsuario, pk=pk)
+    if request.method == 'POST':
+        usuario = perfil.usuario
+        nombre_usuario = usuario.username  # Guardamos el nombre antes de eliminar
+        usuario.delete()  # Esto también eliminará el perfil por la relación CASCADE
+        messages.success(
+            request, f'Usuario "{nombre_usuario}" eliminado exitosamente.')
+        return redirect('lista_usuarios')
+
+    return render(request, 'registro/usuario_confirm_delete.html', {
+        'perfil': perfil,
+        'titulo': 'Confirmar Eliminación'
+    })
+
+
+@login_required
+@user_passes_test(es_superusuario)
+def toggle_usuario_estado(request, pk):
+    perfil = get_object_or_404(PerfilUsuario, pk=pk)
+    usuario = perfil.usuario
+    usuario.is_active = not usuario.is_active
+    usuario.save()
+
+    estado = "activado" if usuario.is_active else "suspendido"
+    messages.success(
+        request, f'Usuario "{usuario.username}" {estado} exitosamente.')
+    return redirect('lista_usuarios')
+
+
+@login_required
+@user_passes_test(es_superusuario)
+def toggle_colegio_estado(request, pk):
+    colegio = get_object_or_404(Colegio, pk=pk)
+    colegio.activo = not colegio.activo
+    colegio.save()
+
+    # También actualizar el estado de los usuarios asociados
+    if not colegio.activo:
+        PerfilUsuario.objects.filter(
+            colegio=colegio).update(usuario__is_active=False)
+
+    estado = "activado" if colegio.activo else "suspendido"
+    messages.success(
+        request, f'Colegio "{colegio.nombre}" {estado} exitosamente.')
+    return redirect('lista_colegios')
 
 
 @login_required
