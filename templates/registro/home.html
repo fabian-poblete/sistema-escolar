@@ -1,53 +1,313 @@
 {% extends 'registro/base.html' %} {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-8 text-center">
-    <h1 class="display-4 mb-4">Bienvenido al Sistema de Atrasos Escolares</h1>
-    <p class="lead">
-      Gestione los atrasos de sus estudiantes de manera eficiente y profesional.
-    </p>
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="text-center mb-5">
+        <div class="hero-section">
+          <h1 class="display-4 mb-3">Sistema de Atrasos Escolares</h1>
+          <p class="lead text-muted">
+            Gestione los atrasos de sus estudiantes de manera eficiente y
+            profesional
+          </p>
+        </div>
+      </div>
 
-    <div class="row mt-5">
-      <div class="col-md-4">
-        <div class="card h-100">
-          <div class="card-body">
-            <i class="bi bi-people-fill display-4 text-primary mb-3"></i>
+      {% if user.is_authenticated %}
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="feature-card">
+            <div class="card-icon">
+              <i class="bi bi-people-fill"></i>
+            </div>
             <h5 class="card-title">Gestión de Estudiantes</h5>
             <p class="card-text">
-              Registre y mantenga la información de sus estudiantes.
+              Administre la información de sus estudiantes de manera
+              centralizada y eficiente.
             </p>
-            <a href="{% url 'lista_estudiantes' %}" class="btn btn-primary"
-              >Ver Estudiantes</a
+            <a
+              href="{% url 'lista_estudiantes' %}"
+              class="btn btn-primary w-100"
             >
+              <i class="bi bi-arrow-right-circle me-2"></i>Ver Estudiantes
+            </a>
           </div>
         </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card h-100">
-          <div class="card-body">
-            <i class="bi bi-clock-history display-4 text-primary mb-3"></i>
+
+        <div class="col-md-4">
+          <div class="feature-card">
+            <div class="card-icon">
+              <i class="bi bi-clock-history"></i>
+            </div>
             <h5 class="card-title">Registro de Atrasos</h5>
             <p class="card-text">
-              Registre los atrasos de sus estudiantes fácilmente.
+              Registre y gestione los atrasos de sus estudiantes de forma rápida
+              y sencilla.
             </p>
-            <a href="{% url 'registrar_atraso' %}" class="btn btn-primary"
-              >Registrar Atraso</a
+            <a
+              href="{% url 'registrar_atraso' %}"
+              class="btn btn-primary w-100"
             >
+              <i class="bi bi-plus-circle me-2"></i>Registrar Atraso
+            </a>
           </div>
         </div>
-      </div>
-      <div class="col-md-4">
-        <div class="card h-100">
-          <div class="card-body">
-            <i class="bi bi-file-earmark-text display-4 text-primary mb-3"></i>
+
+        <div class="col-md-4">
+          <div class="feature-card">
+            <div class="card-icon">
+              <i class="bi bi-file-earmark-text"></i>
+            </div>
             <h5 class="card-title">Historial de Atrasos</h5>
-            <p class="card-text">Consulte el historial completo de atrasos.</p>
-            <a href="{% url 'lista_atrasos' %}" class="btn btn-primary"
-              >Ver Historial</a
-            >
+            <p class="card-text">
+              Consulte y analice el historial completo de atrasos de sus
+              estudiantes.
+            </p>
+            <a href="{% url 'lista_atrasos' %}" class="btn btn-primary w-100">
+              <i class="bi bi-search me-2"></i>Ver Historial
+            </a>
           </div>
         </div>
       </div>
+
+      {% if total_estudiantes or total_atrasos %}
+      <div class="row mt-5">
+        <div class="col-12">
+          <div class="stats-card">
+            <div class="row text-center">
+              <div class="col-md-6">
+                <div class="stat-item">
+                  <div class="stat-icon">
+                    <i class="bi bi-people"></i>
+                  </div>
+                  <h3 class="stat-number">{{ total_estudiantes }}</h3>
+                  <p class="stat-label">Estudiantes Registrados</p>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="stat-item">
+                  <div class="stat-icon">
+                    <i class="bi bi-clock"></i>
+                  </div>
+                  <h3 class="stat-number">{{ total_atrasos }}</h3>
+                  <p class="stat-label">Atrasos Registrados</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %} {% else %}
+      <div class="text-center mt-5">
+        <div class="welcome-card">
+          <div class="welcome-icon">
+            <i class="bi bi-door-open"></i>
+          </div>
+          <h2 class="mb-4">Bienvenido al Sistema</h2>
+          <p class="lead mb-4">
+            Por favor, inicie sesión para acceder a todas las funcionalidades.
+          </p>
+          <a href="{% url 'login' %}" class="btn btn-primary btn-lg">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
+          </a>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
+
+<style>
+  .hero-section {
+    padding: 3rem 0;
+    background: linear-gradient(
+      135deg,
+      rgba(67, 97, 238, 0.1),
+      rgba(63, 55, 201, 0.1)
+    );
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+  }
+
+  .feature-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    height: 100%;
+    box-shadow: var(--box-shadow);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+  }
+
+  .feature-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(
+      90deg,
+      var(--primary-color),
+      var(--secondary-color)
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .feature-card:hover::before {
+    opacity: 1;
+  }
+
+  .card-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(
+      135deg,
+      rgba(67, 97, 238, 0.1),
+      rgba(63, 55, 201, 0.1)
+    );
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-icon i {
+    font-size: 1.8rem;
+    color: var(--primary-color);
+  }
+
+  .card-title {
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-color);
+  }
+
+  .card-text {
+    color: var(--text-color);
+    opacity: 0.8;
+    margin-bottom: 1.5rem;
+  }
+
+  .stats-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: var(--box-shadow);
+  }
+
+  .stat-item {
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    background: linear-gradient(
+      135deg,
+      rgba(67, 97, 238, 0.05),
+      rgba(63, 55, 201, 0.05)
+    );
+    transition: all 0.3s ease;
+  }
+
+  .stat-item:hover {
+    transform: translateY(-3px);
+    background: linear-gradient(
+      135deg,
+      rgba(67, 97, 238, 0.1),
+      rgba(63, 55, 201, 0.1)
+    );
+  }
+
+  .stat-icon {
+    width: 50px;
+    height: 50px;
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.1);
+  }
+
+  .stat-icon i {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+  }
+
+  .stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-label {
+    color: var(--text-color);
+    opacity: 0.8;
+    margin: 0;
+  }
+
+  .welcome-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 3rem;
+    box-shadow: var(--box-shadow);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .welcome-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(
+      135deg,
+      rgba(67, 97, 238, 0.1),
+      rgba(63, 55, 201, 0.1)
+    );
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 2rem;
+  }
+
+  .welcome-icon i {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+  }
+
+  .btn {
+    padding: 0.8rem 1.5rem;
+    font-weight: 500;
+    border-radius: 8px;
+  }
+
+  .btn i {
+    font-size: 1.1rem;
+  }
+
+  @media (max-width: 768px) {
+    .hero-section {
+      padding: 2rem 0;
+    }
+
+    .feature-card {
+      padding: 1.5rem;
+    }
+
+    .stat-item {
+      margin-bottom: 1rem;
+    }
+
+    .welcome-card {
+      padding: 2rem;
+    }
+  }
+</style>
 {% endblock %}
